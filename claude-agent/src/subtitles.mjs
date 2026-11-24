@@ -4,20 +4,26 @@
 
 const SENTENCE_RE = /[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g;
 
-function chunkWords(sentence, limit) {
+// Split a long sentence into chunks of similar length (never above `limit`), so a
+// cue never ends with an orphan like "de LED.". Breaks after a comma when one is
+// close to the target length.
+export function chunkWords(sentence, limit) {
     const words = sentence.split(' ').filter(Boolean);
+    const count = Math.ceil(sentence.length / limit);
+    const target = sentence.length / count;
     const chunks = [];
     let current = '';
     for (const word of words) {
         const next = current ? `${current} ${word}` : word;
-        if (next.length > limit && current) {
+        const closerNow = Math.abs(current.length - target) <= Math.abs(next.length - target);
+        const lastChunk = chunks.length >= count - 1;
+        if (current && (next.length > limit || (!lastChunk && next.length > target && closerNow))) {
             chunks.push(current);
             current = word;
         } else {
             current = next;
         }
-        // Prefer to close a chunk right after a comma once it is reasonably long.
-        if (/[,;:]$/.test(current) && current.length >= limit * 0.6) {
+        if (!lastChunk && /[,;:]$/.test(current) && current.length >= target * 0.7) {
             chunks.push(current);
             current = '';
         }

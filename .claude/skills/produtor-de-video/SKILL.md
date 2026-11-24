@@ -22,7 +22,7 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 1. `oga_doctor` (uma vez por sessão) → veja `capabilities` e `todo`. Se faltar algo, diga ao usuário o comando exato do `todo`.
 2. Escreva o roteiro (formato abaixo). Mostre ao usuário a lista de cenas (narração + visual) e ajuste se ele pedir.
 3. `oga_produce_video` com `dry_run: true` → confira `ok` e `estimated_total_seconds`.
-4. `oga_produce_video` de verdade. Ele devolve `job_id` se demorar; acompanhe com `oga_job_status` (`wait_seconds: 240`).
+4. `oga_produce_video` de verdade. Ele devolve `job_id` se demorar; acompanhe chamando `oga_job_status` (`wait_seconds: 50`) repetidamente até `status: "done"`.
    Em CPU cada imagem leva ~1 min (modo rápido); avise o usuário do tempo estimado (≈ 1 min × nº de cenas com imagem).
 5. Entregue: caminho do `.mp4`, do `.srt`, duração e custo. Olhe a miniatura retornada para conferir o resultado.
 6. Para alterar: edite o roteiro e rode de novo com o **mesmo `output_name`** — só o que mudou é regerado.

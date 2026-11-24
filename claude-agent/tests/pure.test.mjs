@@ -5,10 +5,10 @@ import test from 'node:test';
 import { assertPaidAllowed, paidPolicy } from '../src/config.mjs';
 import { aspectToDimensions, buildSdCliArgs, getImageModel } from '../src/engines/sdcpp.mjs';
 import { framesForSeconds } from '../src/engines/wan2gp.mjs';
-import { buildAssembleFilter, buildAudioMixFilter, clipStarts, kenBurnsFilter, outputSize, pickMotion, totalDuration } from '../src/media.mjs';
+import { buildAssembleFilter, buildAudioMixFilter, clipStarts, fitText, kenBurnsFilter, outputSize, pickMotion, totalDuration } from '../src/media.mjs';
 import { dryRun } from '../src/producer.mjs';
 import { CUT_DURATION, LEAD_IN, TAIL, parseStoryboard, planTimeline, slugify } from '../src/storyboard.mjs';
-import { splitCues, timeCues, toSrt, wrapLines } from '../src/subtitles.mjs';
+import { chunkWords, splitCues, timeCues, toSrt, wrapLines } from '../src/subtitles.mjs';
 import { piperVoiceUrl } from '../src/tts.mjs';
 
 const scene = (narration, extra = {}) => ({ narration, visual: { type: 'color' }, ...extra });
@@ -157,4 +157,20 @@ test('Piper voice URL and slugs', () => {
         'https://huggingface.co/rhasspy/piper-voices/resolve/main/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx');
     assert.throws(() => piperVoiceUrl('../../etc'), /inválido/);
     assert.equal(slugify('Energia Solar: Como Funciona?'), 'energia-solar-como-funciona');
+});
+
+test('long sentences split into balanced chunks without orphans', () => {
+    const chunks = chunkWords('Primeira dica: troque lâmpadas antigas por lâmpadas de LED.', 52);
+    assert.equal(chunks.length, 2);
+    assert.ok(Math.min(...chunks.map((c) => c.length)) >= 20, JSON.stringify(chunks));
+});
+
+test('titles wrap and shrink to fit portrait and landscape frames', () => {
+    const portrait = fitText('Economize energia em casa', { width: 720, size: 72 });
+    assert.ok(portrait.lines.length >= 2 && portrait.lines.length <= 3);
+    for (const line of portrait.lines) assert.ok(line.length * portrait.size * 0.62 <= 720 * 0.88 + 1, line);
+    const landscape = fitText('Energia solar em 1 minuto', { width: 1280, size: 72 });
+    assert.deepEqual(landscape.lines, ['Energia solar em 1 minuto']);
+    const huge = fitText('palavra '.repeat(40), { width: 720, size: 72, maxLines: 3 });
+    assert.ok(huge.size < 72);
 });

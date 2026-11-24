@@ -114,9 +114,9 @@ export function subtitleFontName() {
 
 function drawTextFilter({ textFile, fontFile, size, y, box = true }) {
     const font = fontFile ? `fontfile=${fontFile}` : 'font=Sans';
-    const boxPart = box ? ':box=1:boxcolor=black@0.45:boxborderw=18' : '';
+    const boxPart = box ? ':box=1:boxcolor=black@0.45:boxborderw=14' : '';
     return `drawtext=${font}:textfile=${textFile}:fontcolor=white:fontsize=${size}${boxPart}`
-        + `:line_spacing=8:x=(w-text_w)/2:y=${y}:shadowcolor=black@0.6:shadowx=2:shadowy=2`;
+        + `:x=(w-text_w)/2:y=${Math.round(y)}:shadowcolor=black@0.6:shadowx=2:shadowy=2`;
 }
 
 function writeTextFile(projectDir, name, text) {
@@ -126,15 +126,58 @@ function writeTextFile(projectDir, name, text) {
     return rel;
 }
 
+export function wrapWords(text, perLine) {
+    const lines = [];
+    let current = '';
+    for (const word of String(text).replace(/\s+/g, ' ').trim().split(' ')) {
+        const next = current ? `${current} ${word}` : word;
+        if (current && next.length > perLine) {
+            lines.push(current);
+            current = word;
+        } else {
+            current = next;
+        }
+    }
+    if (current) lines.push(current);
+    return lines;
+}
+
+// drawtext neither wraps nor centres multi-line text, so wrap here (shrinking the
+// font until it fits in `maxLines`) and draw each line centred on its own.
+export function fitText(text, { width, size, maxLines = 3 }) {
+    let fontSize = size;
+    for (;;) {
+        const perLine = Math.max(6, Math.floor((width * 0.88) / (fontSize * 0.62)));
+        const lines = wrapWords(text, perLine);
+        if ((lines.length <= maxLines && lines.every((l) => l.length <= perLine)) || fontSize <= 14) {
+            return { size: fontSize, lines, lineHeight: Math.round(fontSize * 1.3) };
+        }
+        fontSize = Math.round(fontSize * 0.88);
+    }
+}
+
+function textBlock({ projectDir, key, text, fontFile, width, size, top, box, maxLines }) {
+    const fit = fitText(text, { width, size, maxLines });
+    const filters = fit.lines.map((line, i) => drawTextFilter({
+        textFile: writeTextFile(projectDir, `${key}-${i + 1}.txt`, line),
+        fontFile,
+        size: fit.size,
+        y: top + i * fit.lineHeight,
+        box,
+    }));
+    return { filters, height: fit.lines.length * fit.lineHeight };
+}
+
+function titleOverlay({ projectDir, title, index, width, height }) {
+    const fontFile = ensureProjectFont(projectDir);
+    return textBlock({ projectDir, key: `title-${index}`, text: title, fontFile, width, size: Math.round(Math.min(width, height) / 14), top: height * 0.06, box: true, maxLines: 3 }).filters;
+}
+
 // Scene from a still image with a Ken Burns move.
 export async function renderImageScene({ projectDir, image, out, duration, width, height, fps, motion, title, index, signal }) {
     const frames = Math.max(2, Math.round(duration * fps));
     const filters = [kenBurnsFilter({ width, height, fps, frames, motion })];
-    if (title) {
-        const fontFile = ensureProjectFont(projectDir);
-        const textFile = writeTextFile(projectDir, `title-${index}.txt`, title);
-        filters.push(drawTextFilter({ textFile, fontFile, size: Math.round(height / 16), y: 'h*0.07' }));
-    }
+    if (title) filters.push(...titleOverlay({ projectDir, title, index, width, height }));
     filters.push('format=yuv420p');
     await ffmpeg(['-i', image, '-vf', filters.join(','), '-frames:v', String(frames), '-r', String(fps), ...X264, '-an', out],
         { cwd: projectDir, signal });
@@ -153,11 +196,7 @@ export async function renderVideoScene({ projectDir, video, out, duration, width
         `crop=${width}:${height}`,
         `tpad=stop_mode=clone:stop_duration=${Math.ceil(duration + 1)}`,
     ];
-    if (title) {
-        const fontFile = ensureProjectFont(projectDir);
-        const textFile = writeTextFile(projectDir, `title-${index}.txt`, title);
-        filters.push(drawTextFilter({ textFile, fontFile, size: Math.round(height / 16), y: 'h*0.07' }));
-    }
+    if (title) filters.push(...titleOverlay({ projectDir, title, index, width, height }));
     filters.push('format=yuv420p');
     await ffmpeg(['-i', video, '-vf', filters.join(','), '-t', duration.toFixed(3), '-r', String(fps), ...X264, '-an', out],
         { cwd: projectDir, signal });
@@ -169,13 +208,19 @@ export async function renderColorScene({ projectDir, out, duration, width, heigh
     const safeColor = /^(#|0x)?[0-9a-fA-F]{6}$|^[a-zA-Z]+$/.test(color) ? color : '#101828';
     const fontFile = ensureProjectFont(projectDir);
     const filters = ['vignette=PI/5'];
+    const short = Math.min(width, height);
+    const head = title ? fitText(title, { width, size: Math.round(short / 10), maxLines: 3 }) : null;
+    const sub = subtitle ? fitText(subtitle, { width, size: Math.round(short / 20), maxLines: 3 }) : null;
+    const gap = head && sub ? Math.round(short / 30) : 0;
+    const blockHeight = (head ? head.lines.length * head.lineHeight : 0) + gap + (sub ? sub.lines.length * sub.lineHeight : 0);
+    let top = (height - blockHeight) / 2 - height * 0.05;
     if (title) {
-        const textFile = writeTextFile(projectDir, `card-title-${index}.txt`, title);
-        filters.push(drawTextFilter({ textFile, fontFile, size: Math.round(height / 11), y: subtitle ? '(h/2)-text_h' : '(h-text_h)/2', box: false }));
+        const block = textBlock({ projectDir, key: `card-title-${index}`, text: title, fontFile, width, size: Math.round(short / 10), top, box: false, maxLines: 3 });
+        filters.push(...block.filters);
+        top += block.height + gap;
     }
     if (subtitle) {
-        const textFile = writeTextFile(projectDir, `card-sub-${index}.txt`, subtitle);
-        filters.push(drawTextFilter({ textFile, fontFile, size: Math.round(height / 24), y: '(h/2)+30', box: false }));
+        filters.push(...textBlock({ projectDir, key: `card-sub-${index}`, text: subtitle, fontFile, width, size: Math.round(short / 20), top, box: false, maxLines: 3 }).filters);
     }
     filters.push('format=yuv420p');
     await ffmpeg([

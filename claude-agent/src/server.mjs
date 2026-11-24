@@ -23,8 +23,9 @@ import { RECOMMENDED_VOICES, availableTtsEngines, downloadPiperVoice, listPiperV
 // stdout carries the MCP protocol; anything a dependency logs must go to stderr.
 console.log = (...args) => console.error(...args);
 
-const DEFAULT_WAIT = 45;
-const MAX_WAIT = 300;
+const DEFAULT_WAIT = 40;
+// Many MCP clients abort a request after 60 s, so one call never waits longer than 50 s.
+const MAX_WAIT = 50;
 
 const INSTRUCTIONS = `Open Generative AI — geração de imagens, narração e vídeos.
 Regras:

@@ -15,11 +15,11 @@ Você pede em português, o Claude escreve o roteiro, mostra para você, gera tu
 
 | Função | Motor | Custo | Precisa de GPU? | Status |
 |---|---|---|---|---|
-| Gerar imagem | sd.cpp + Dreamshaper 8 (SD 1.5) | grátis | não (CPU ~1 min/imagem no modo rápido) | ✅ testado |
+| Gerar imagem | sd.cpp + Dreamshaper 8 (SD 1.5) | grátis | não (CPU: 1–3 min/imagem no modo rápido) | ✅ testado |
 | Modo rápido de imagem | LCM-LoRA (5 passos) | grátis | não | ✅ testado |
 | Outros modelos de imagem | Realistic Vision, Anything v5, SDXL, Z-Image Turbo/Base | grátis | recomendado para SDXL/Z-Image | ⚙️ baixar com `download` |
 | Narração natural pt-BR | Piper (vozes faber, cadu, jeff) | grátis | não | ✅ testado |
-| Narração reserva | eSpeak NG / vozes do Windows (SAPI) | grátis | não | ✅ eSpeak testado; SAPI só no Windows |
+| Narração reserva | eSpeak NG / vozes do Windows (SAPI) | grátis | não | ✅ eSpeak testado · SAPI só no Windows (não testado aqui) |
 | Legendas (.srt + gravadas no vídeo) | geradas do roteiro | grátis | não | ✅ testado |
 | Transições, Ken Burns, cartelas de título | FFmpeg | grátis | não | ✅ testado |
 | Música de fundo com *ducking* | FFmpeg | grátis | não | ✅ testado |
@@ -187,8 +187,9 @@ Nenhuma chave é gravada em arquivo. `.env` e `.env.*` já estão no `.gitignore
 
 ## 8. Limitações conhecidas
 
-- **CPU é lenta para imagem:** ~1 min por imagem 512 px no modo rápido, ~3,5 min no normal (medido em 4 núcleos).
-  Um vídeo de 8 cenas leva ~10 min em CPU; com GPU NVIDIA, segundos por imagem.
+- **CPU é lenta para imagem** (medido em 4 núcleos, sem GPU): modo rápido ≈ 1,3 min (512×512) a 3 min (16:9, 896×512)
+  por imagem; modo normal ≈ 3,5 min (512×512). O vídeo de demonstração (4 imagens, 35 s) levou ~9,5 min;
+  montar um vídeo de 98 s a partir de imagens prontas levou ~1 min. Com GPU NVIDIA, segundos por imagem.
 - **SD 1.5 não escreve texto** na imagem e tem resolução nativa 512 px (o vídeo é ampliado para 720p).
   Para mais qualidade, use SDXL/Z-Image (exigem mais memória) ou o Wan2GP (Flux/Qwen-Image) com GPU.
 - **Clipes de vídeo IA exigem GPU** (Wan2GP é só CUDA/ROCm).
@@ -202,8 +203,11 @@ Funciona, com estas diferenças — tudo foi testado num container de 4 núcleos
 
 - Imagens (CPU), narração, legendas, transições e montagem: **funcionam**.
 - Clipes de vídeo IA (Wan2GP): **não** (sem GPU) — as cenas viram imagens animadas.
-- O ambiente precisa liberar `huggingface.co` e `us.aws.cdn.hf.co` para baixar modelos e vozes.
-  Downloads de *GitHub Releases* podem estar bloqueados; nesse caso o sd.cpp é compilado do código-fonte.
+- O ambiente precisa liberar `huggingface.co` e `us.aws.cdn.hf.co` para baixar modelos e vozes
+  (já configurado no ambiente de nuvem **Open-Generative-AI**).
+- O script de setup desse ambiente instala as dependências, o Piper e as vozes pt-BR em cada sessão nova.
+  A parte pesada roda sob demanda: `npm run agent:setup` (~10 min: compila o sd.cpp — os downloads do
+  GitHub Releases são bloqueados lá — e baixa o modelo de imagem). Peça ao Claude: *"rode o agent:setup"*.
 - O container é temporário: modelos e vídeos somem ao fim da sessão. Baixe o `.mp4` antes de sair.
 
 ## 10. Testes (sem custo)
@@ -212,5 +216,5 @@ Funciona, com estas diferenças — tudo foi testado num container de 4 núcleos
 cd claude-agent && npm test
 ```
 
-20 testes: legendas, linha do tempo e limite de 120 s, bloqueio de API paga, filtros do FFmpeg,
+22 testes: legendas, títulos, linha do tempo e limite de 120 s, bloqueio de API paga, filtros do FFmpeg,
 renderização real de vídeo com narração/legendas/música, Wan2GP com um `wgp.py` falso e o servidor MCP via stdio.
