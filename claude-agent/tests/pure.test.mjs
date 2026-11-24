@@ -10,6 +10,7 @@ import { dryRun } from '../src/producer.mjs';
 import { CUT_DURATION, LEAD_IN, TAIL, parseStoryboard, planTimeline, slugify } from '../src/storyboard.mjs';
 import { chunkWords, splitCues, timeCues, toSrt, wrapLines } from '../src/subtitles.mjs';
 import { piperVoiceUrl } from '../src/tts.mjs';
+import { synthesize as synthMusic } from '../src/music.mjs';
 
 const scene = (narration, extra = {}) => ({ narration, visual: { type: 'color' }, ...extra });
 
@@ -63,10 +64,11 @@ test('planTimeline keeps narration clear of transitions', () => {
     const sb = parseStoryboard({ title: 'X', scenes: [scene('a'), scene('b', { transition: 'cut' }), scene('c')] });
     const plan = planTimeline(sb, [4, 6, 0]);
     assert.equal(plan.transitions[0].duration, 0.6);
-    assert.equal(plan.transitions[1].duration, CUT_DURATION);
+    assert.ok(Math.abs(plan.transitions[1].duration - 1 / 30) < 1e-9, 'a cut is one frame');
+    assert.ok(CUT_DURATION < 0.05);
     // Scene 1 must fit lead-in + narration + tail + its outgoing transition.
     assert.ok(plan.durations[0] >= LEAD_IN + 4 + TAIL + 0.6 - 1e-9);
-    assert.ok(plan.durations[1] >= LEAD_IN + 6 + TAIL + CUT_DURATION - 1e-9);
+    assert.ok(plan.durations[1] >= LEAD_IN + 6 + TAIL + 1 / 30 - 1e-9);
     assert.equal(plan.durations[2], 2.5);
     // Narration of scene i ends before scene i+1 starts.
     for (let i = 0; i < 2; i++) {
@@ -173,4 +175,34 @@ test('titles wrap and shrink to fit portrait and landscape frames', () => {
     assert.deepEqual(landscape.lines, ['Energia solar em 1 minuto']);
     const huge = fitText('palavra '.repeat(40), { width: 720, size: 72, maxLines: 3 });
     assert.ok(huge.size < 72);
+});
+
+test('target_seconds pads every scene so the video lands exactly on the target', () => {
+    const sb = parseStoryboard({ title: 'X', format: { fps: 30, target_seconds: 120 }, scenes: Array.from({ length: 12 }, () => scene('x')) });
+    const plan = planTimeline(sb, Array.from({ length: 12 }, (_, i) => 7.3 + i * 0.137));
+    assert.equal(plan.total, 120);
+    assert.ok(plan.padding_per_scene > 0);
+    for (const d of plan.durations) assert.ok(Math.abs(d * 30 - Math.round(d * 30)) < 1e-6, `frame-aligned ${d}`);
+    for (let i = 0; i < 11; i++) {
+        assert.ok(plan.narrationStarts[i] + 7.3 + i * 0.137 <= plan.starts[i + 1] + 1e-9);
+    }
+    const tooLong = planTimeline(sb, Array.from({ length: 12 }, () => 12));
+    assert.equal(tooLong.withinLimit, false);
+    assert.match(tooLong.targetError, /duração-alvo/);
+});
+
+test('music needs a file or generate:true; generated music has the requested length', () => {
+    assert.throws(() => parseStoryboard({ title: 'X', music: { volume: 0.2 }, scenes: [scene('x')] }), /music/);
+    const sb = parseStoryboard({ title: 'X', music: { generate: true }, scenes: [scene('x')] });
+    assert.equal(sb.music.mood, 'emotional');
+    const track = synthMusic({ seconds: 6, mood: 'hopeful' });
+    assert.equal(track.L.length, 6 * 44100);
+    const peak = track.L.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    assert.ok(peak > 0.5 && peak <= 0.8001, `peak ${peak}`);
+});
+
+test('Realistic Vision gets the ft-MSE VAE flag when requested', () => {
+    const model = getImageModel('realistic-vision-v51');
+    const args = buildSdCliArgs({ model, modelsDir: '/m', prompt: 'p', outPath: '/o.png', width: 512, height: 896, steps: 6, cfgScale: 1, seed: 1, fast: true, vaePath: '/m/vae.safetensors' });
+    assert.deepEqual(args.slice(-2), ['--vae', '/m/vae.safetensors']);
 });

@@ -19,6 +19,7 @@ import {
 import { estimateNarrationSeconds, limitError, parseStoryboard, planTimeline, slugify } from './storyboard.mjs';
 import { splitCues, timeCues, toSrt } from './subtitles.mjs';
 import { synthesize } from './tts.mjs';
+import { generateMusic } from './music.mjs';
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp']);
 
@@ -55,6 +56,9 @@ export function dryRun(input) {
     return {
         ok: plan.withinLimit,
         estimated_total_seconds: plan.total,
+        estimated_narration_fit_seconds: plan.natural_seconds,
+        target_seconds: plan.target_seconds,
+        ...(plan.targetError ? { problem: plan.targetError } : {}),
         max_seconds: plan.maxSeconds,
         scenes: sb.scenes.map((s, i) => ({
             scene: i + 1,
@@ -77,7 +81,7 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
     if (paidScenes.length) assertPaidAllowed(allowPaid);
 
     const estimate = dryRun(sb);
-    if (estimate.estimated_total_seconds > estimate.max_seconds * 1.1) {
+    if (estimate.estimated_narration_fit_seconds > Math.min(estimate.max_seconds, estimate.target_seconds || Infinity) * 1.1) {
         throw new Error(`Estimativa de ${estimate.estimated_total_seconds.toFixed(0)} s excede o limite de ${estimate.max_seconds} s. `
             + 'Encurte a narração ou reduza as cenas.');
     }
@@ -119,7 +123,8 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
     // 2. Timeline (real durations) ─────────────────────────────────────────────
     const plan = planTimeline(sb, narration.map((r) => r?.duration || 0));
     if (!plan.withinLimit) throw limitError(plan);
-    log(`Linha do tempo: ${plan.total.toFixed(1)} s em ${n} cenas`);
+    log(`Linha do tempo: ${plan.total.toFixed(3)} s em ${n} cenas`
+        + (plan.padding_per_scene ? ` (+${plan.padding_per_scene.toFixed(2)} s de pausa por cena para fechar a duração-alvo)` : ''));
 
     // 3. Visuals ────────────────────────────────────────────────────────────────
     let wan2gp = null;
@@ -252,14 +257,22 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
     });
 
     // 7. Audio mix ─────────────────────────────────────────────────────────────
-    progress('áudio', 0.93, 'Mixando narração e música');
-    if (sb.music?.path && !fs.existsSync(sb.music.path)) throw new Error(`Música não encontrada: ${sb.music.path}`);
+    progress('áudio', 0.92, 'Mixando narração e música');
+    let music = sb.music;
+    if (music && !music.path && music.generate) {
+        const seconds = Math.ceil(plan.total) + 1;
+        const out = path.join(projectDir, `trilha-${music.mood}-${hash({ mood: music.mood, seconds })}.wav`);
+        if (!fs.existsSync(out)) await generateMusic({ seconds, mood: music.mood, outPath: out, signal });
+        engines.add(`música: trilha original gerada localmente (${music.mood})`);
+        music = { ...music, path: out };
+    }
+    if (music?.path && !fs.existsSync(music.path)) throw new Error(`Música não encontrada: ${music.path}`);
     const audio = path.join(projectDir, 'audio.m4a');
     await mixAudio({
         projectDir,
         narrations: narration.map((r, i) => (r ? { path: r.path, start: plan.narrationStarts[i] } : null)).filter(Boolean),
         total: plan.total,
-        music: sb.music,
+        music,
         out: audio,
         signal,
     });

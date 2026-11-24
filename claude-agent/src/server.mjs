@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { pathToFileURL } from 'node:url';
 import { MAX_VIDEO_SECONDS, REPO_ROOT, assertPaidAllowed, ensureDir, resolvePaths } from './config.mjs';
 import { doctor } from './doctor.mjs';
-import { LCM_LORA, downloadImageModel, getImageModel, lcmAvailable, listImageModels } from './engines/sdcpp.mjs';
+import { LCM_LORA, SD15_VAE, downloadImageModel, getImageModel, lcmAvailable, listImageModels } from './engines/sdcpp.mjs';
 import { listVideoModels, wan2gpStatus, writeWan2gpConfig } from './engines/wan2gp.mjs';
 import { cancelJob, listJobs, startJob, waitForJob } from './jobs.mjs';
 import { previewBase64 } from './media.mjs';
@@ -122,12 +122,12 @@ server.registerTool('oga_list_models', {
 
 server.registerTool('oga_download_model', {
     title: 'Baixar modelo gratuito',
-    description: `Baixa um modelo/voz gratuito: id do catálogo de imagem (ex. "dreamshaper-8", "z-image-turbo"), "${LCM_LORA.id}" (modo rápido) ou voz Piper (ex. "pt_BR-faber-medium").`,
+    description: `Baixa um modelo/voz gratuito: id do catálogo de imagem (ex. "dreamshaper-8", "realistic-vision-v51", "z-image-turbo"), "${LCM_LORA.id}" (modo rápido), "${SD15_VAE.id}" ou voz Piper (ex. "pt_BR-faber-medium", "es_MX-claude-high").`,
     inputSchema: { model: z.string(), wait_seconds: waitSchema },
 }, async ({ model, wait_seconds: wait = DEFAULT_WAIT }) => {
     try {
         const isVoice = /^[a-z]{2,3}_[A-Z]{2}-/.test(model);
-        if (!isVoice && model !== LCM_LORA.id && !getImageModel(model)) {
+        if (!isVoice && model !== LCM_LORA.id && model !== SD15_VAE.id && !getImageModel(model)) {
             throw new Error(`Modelo desconhecido: ${model}. Veja oga_list_models.`);
         }
         const job = startJob('download', `Download de ${model}`, async ({ signal, progress }) => {

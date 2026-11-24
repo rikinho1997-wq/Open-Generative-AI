@@ -1,0 +1,91 @@
+{
+  "title": "Cómo enseñar la fe católica a tus hijos",
+  "output_name": "fe-catolica-hijos",
+  "language": "es-MX",
+  "format": { "aspect_ratio": "9:16", "resolution": "1080p", "fps": 30, "target_seconds": 120 },
+  "voice": { "engine": "piper", "voice": "es_MX-claude-high", "speed": 0.95 },
+  "subtitles": { "enabled": true, "burn": true },
+  "music": { "generate": true, "mood": "emotional", "volume": 0.16, "duck": true },
+  "defaults": {
+    "transition": "fade",
+    "transition_duration": 0.8,
+    "image_model": "dreamshaper-8",
+    "fast": true,
+    "steps": 6,
+    "style": "photorealistic, cinematic film still, warm color grading, soft natural light, shallow depth of field, 35mm, film grain, highly detailed",
+    "motion": "auto"
+  },
+  "scenes": [
+    {
+      "visual": { "type": "image", "motion": "zoom_in", "prompt": "a latin american mother and her small son kneeling side by side praying in front of a wooden crucifix and a lit candle on a small home altar, cozy living room, warm morning sunlight through the window, modest everyday clothes, long sleeves" },
+      "title": "Cómo enseñar la fe católica a tus hijos",
+      "narration": "La fe no se enseña solo con palabras. Se transmite en casa, todos los días, con pequeños gestos llenos de amor que tus hijos nunca olvidarán.",
+      "transition": "fadeblack"
+    },
+    {
+      "visual": { "type": "image", "motion": "pan_up", "prompt": "a latin american family of four holding hands and praying with eyes closed around a wooden dining table with homemade food, warm evening light, modest clothes, wide shot" },
+      "title": "Recen juntos",
+      "narration": "Rezar juntos antes de comer les recuerda que todo lo que tenemos es un regalo de Dios, y que siempre hay motivos para dar gracias.",
+      "transition": "dissolve"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_out", "prompt": "a father reading an illustrated children's bible to his young son and daughter sitting on a cozy sofa, warm lamp light, wooden bookshelves, modest clothes, long sleeves" },
+      "title": "Lean la Palabra",
+      "narration": "Lee la Biblia con ellos como una historia viva. Pregúntales qué sintió Jesús, y escucha con atención lo que responden.",
+      "transition": "smoothleft"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_in", "prompt": "close-up of the small hands of a child holding a wooden rosary, soft golden candlelight, dark warm background, bokeh, macro photography" },
+      "title": "El rosario en familia",
+      "narration": "El rosario en familia puede convertirse en un momento de paz. Un solo misterio cada noche es suficiente para comenzar.",
+      "transition": "fade"
+    },
+    {
+      "visual": { "type": "image", "motion": "pan_up", "prompt": "a latin american family of four walking hand in hand toward a white colonial church with a bell tower in a small mexican town plaza, seen from behind, golden hour, long shadows" },
+      "title": "Vivan la misa",
+      "narration": "Vayan juntos a misa y explícales lo que sucede en el altar. Lo que un niño entiende, aprende a amarlo con el corazón.",
+      "transition": "fadewhite"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_out", "prompt": "a young boy seen from behind standing in the aisle of a grand old church, looking up at colorful stained glass windows, rays of light, dust in the air, majestic interior" },
+      "title": "Dejen que se asombren",
+      "narration": "Deja que se asombren. La luz, el silencio y la belleza de la iglesia también les hablan de Dios.",
+      "transition": "dissolve"
+    },
+    {
+      "visual": { "type": "image", "motion": "pan_left", "prompt": "a young girl handing a basket of bread to an elderly woman at the door of a humble colorful house, her mother standing behind her, soft afternoon light, modest clothes, long sleeves" },
+      "title": "El ejemplo enseña",
+      "narration": "Pero la fe se aprende, sobre todo, con el ejemplo. Cuando te ven servir, perdonar y compartir, entienden el Evangelio.",
+      "transition": "smoothup"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_in", "prompt": "a mother and her two children placing small figures in a christmas nativity scene on a table, warm string lights, candles, cozy living room, modest clothes, long sleeves" },
+      "title": "El año litúrgico",
+      "narration": "Vive con ellos el año litúrgico: el Adviento, la Navidad, la Cuaresma y la Pascua. Cada tiempo trae una nueva enseñanza.",
+      "transition": "fadeblack"
+    },
+    {
+      "visual": { "type": "image", "motion": "pan_right", "prompt": "silhouette of a father and his young son sitting together on a grassy hill talking at sunset, dramatic orange sky, wide cinematic shot" },
+      "title": "Escucha sus preguntas",
+      "narration": "No tengas miedo de sus preguntas. Si no sabes la respuesta, búsquenla juntos. Así descubren que la fe también piensa.",
+      "transition": "dissolve"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_in", "prompt": "a little boy praying alone with folded hands in a quiet stone chapel, a single candle glowing, soft rim light, profile view, modest clothes" },
+      "title": "Hablar con Dios",
+      "narration": "Enséñales a hablar con Dios con sus propias palabras: a darle gracias, a pedirle perdón y a confiar siempre en Él.",
+      "transition": "smoothleft"
+    },
+    {
+      "visual": { "type": "image", "motion": "pan_up", "prompt": "a little girl in a long white first communion dress with a veil walking down a church aisle holding a candle, seen from behind, soft light, white flowers on the wooden pews" },
+      "title": "Los sacramentos",
+      "narration": "Acompaña cada sacramento con alegría. La primera comunión no es la meta, es un paso más en el camino.",
+      "transition": "fade"
+    },
+    {
+      "visual": { "type": "image", "motion": "zoom_out", "prompt": "a latin american family of four embracing in a golden wheat field at sunset, seen from behind, warm backlight, lens flare, peaceful" },
+      "title": "Sembrar amor",
+      "narration": "Educar en la fe es sembrar amor. Y lo que se siembra con paciencia y ternura, florece para toda la vida."
+    }
+  ]
+}

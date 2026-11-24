@@ -22,6 +22,17 @@ export const LCM_LORA = {
     sizeGB: 0.13,
     downloadUrl: 'https://huggingface.co/latent-consistency/lcm-lora-sdv1-5/resolve/main/pytorch_lora_weights.safetensors',
 };
+// The SD 1.5 ft-MSE VAE (MIT) decodes sharper faces and truer colours than the
+// original VAE baked into some checkpoints; used automatically when present.
+export const SD15_VAE = {
+    id: 'sd-vae-ft-mse',
+    name: 'VAE ft-MSE para SD 1.5',
+    filename: 'vae-ft-mse-840000-ema-pruned.safetensors',
+    sizeGB: 0.33,
+    downloadUrl: 'https://huggingface.co/stabilityai/sd-vae-ft-mse-original/resolve/main/vae-ft-mse-840000-ema-pruned.safetensors',
+};
+const USES_FT_MSE_VAE = new Set(['realistic-vision-v51']);
+
 export const DEFAULT_NEGATIVE = 'lowres, blurry, deformed, bad anatomy, extra fingers, watermark, text, signature, logo, jpeg artifacts';
 
 export function lcmAvailable(paths = resolvePaths()) {
@@ -80,6 +91,11 @@ export function getImageModel(id) {
 }
 
 export async function downloadImageModel(id, { onProgress, signal } = {}) {
+    if (id === SD15_VAE.id || USES_FT_MSE_VAE.has(id)) {
+        const dest = path.join(resolvePaths().modelsDir, SD15_VAE.filename);
+        await downloadTo(SD15_VAE.downloadUrl, dest, { signal });
+        if (id === SD15_VAE.id) return { model: id, files: [dest] };
+    }
     if (id === LCM_LORA.id) {
         const dest = path.join(resolvePaths().modelsDir, LCM_LORA.filename);
         await downloadTo(LCM_LORA.downloadUrl, dest, { signal, onProgress: (p) => onProgress?.({ file: LCM_LORA.filename, progress: p }) });
@@ -100,7 +116,7 @@ export async function downloadImageModel(id, { onProgress, signal } = {}) {
     return { model: id, files: files.map((f) => f.path) };
 }
 
-export function buildSdCliArgs({ model, modelsDir, prompt, negativePrompt, outPath, width, height, steps, cfgScale, seed, fast = false }) {
+export function buildSdCliArgs({ model, modelsDir, prompt, negativePrompt, outPath, width, height, steps, cfgScale, seed, fast = false, vaePath = null }) {
     const { ZIMAGE_AUXILIARY } = catalog();
     const modelPath = path.join(modelsDir, model.filename);
     // Z-Image GGUFs are standalone diffusion transformers (see localInference.js).
@@ -122,6 +138,7 @@ export function buildSdCliArgs({ model, modelsDir, prompt, negativePrompt, outPa
         args.push('--lora-model-dir', modelsDir);
     }
     if (negativePrompt && !fast) args.push('-n', negativePrompt);
+    if (vaePath) args.push('--vae', vaePath);
     if (model.type === 'z-image') {
         args.push('--llm', path.join(modelsDir, ZIMAGE_AUXILIARY.llm.filename));
         args.push('--vae', path.join(modelsDir, ZIMAGE_AUXILIARY.vae.filename));
@@ -185,6 +202,9 @@ export async function generateLocalImage({
         cfgScale,
         seed: finalSeed,
         fast: useFast,
+        vaePath: USES_FT_MSE_VAE.has(model.id) && fs.existsSync(path.join(paths.modelsDir, SD15_VAE.filename))
+            ? path.join(paths.modelsDir, SD15_VAE.filename)
+            : null,
     });
     const progressState = { tail: '', lastStep: 0, lastTotalSteps: 0 };
     const started = Date.now();

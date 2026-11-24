@@ -17,12 +17,12 @@ Você pede em português, o Claude escreve o roteiro, mostra para você, gera tu
 |---|---|---|---|---|
 | Gerar imagem | sd.cpp + Dreamshaper 8 (SD 1.5) | grátis | não (CPU: 1–3 min/imagem no modo rápido) | ✅ testado |
 | Modo rápido de imagem | LCM-LoRA (5 passos) | grátis | não | ✅ testado |
-| Outros modelos de imagem | Realistic Vision, Anything v5, SDXL, Z-Image Turbo/Base | grátis | recomendado para SDXL/Z-Image | ⚙️ baixar com `download` |
-| Narração natural pt-BR | Piper (vozes faber, cadu, jeff) | grátis | não | ✅ testado |
+| Outros modelos de imagem | Realistic Vision (+ VAE ft-MSE), Anything v5, SDXL, Z-Image Turbo/Base | grátis | recomendado para SDXL/Z-Image | ⚙️ baixar com `download` |
+| Narração natural pt-BR / espanhol | Piper (pt-BR: faber, cadu, jeff · es-MX: claude · es-AR: daniela) | grátis | não | ✅ testado |
 | Narração reserva | eSpeak NG / vozes do Windows (SAPI) | grátis | não | ✅ eSpeak testado · SAPI só no Windows (não testado aqui) |
 | Legendas (.srt + gravadas no vídeo) | geradas do roteiro | grátis | não | ✅ testado |
 | Transições, Ken Burns, cartelas de título | FFmpeg | grátis | não | ✅ testado |
-| Música de fundo com *ducking* | FFmpeg | grátis | não | ✅ testado |
+| Música de fundo com *ducking* | arquivo seu **ou trilha original gerada localmente** (`music.generate`) | grátis | não | ✅ testado |
 | Montagem multi-cena até 120 s | pipeline do agente | grátis | não | ✅ testado |
 | Clipes de vídeo por IA (texto→vídeo, imagem→vídeo) | Wan2GP: Wan 2.1/2.2, LTX-2, Hunyuan | grátis | **sim** (NVIDIA/AMD, ≥ 8 GB VRAM) | ⚙️ instalar o Wan2GP (seção 6) |
 | 600+ modelos na nuvem (Kling, Veo, Sora, Flux Pro…) | MuAPI | **pago** | não | 🔒 bloqueado por padrão (seção 7) |
@@ -110,10 +110,14 @@ Veja o exemplo completo em [`examples/demo-pt-br.json`](examples/demo-pt-br.json
 - `visual.prompt` — descrição **em inglês**, sem texto escrito; textos vão em `title`.
 - `title`, `transition` (`fade`, `fadeblack`, `slideleft`, `circleopen`, `cut`…), `visual.motion` (`zoom_in`, `pan_left`…).
 
-Opções gerais: `format` (`16:9`, `9:16`, `1:1`; `480p`/`720p`/`1080p`), `voice`, `subtitles`, `music`
+Opções gerais: `format` (`16:9`, `9:16`, `1:1`; `480p`/`720p`/`1080p`; `target_seconds` para fechar numa duração exata),
+`voice`, `subtitles`, `music` (`{"generate": true, "mood": "emotional"}` cria uma trilha instrumental original —
+climas `emotional`, `hopeful`, `calm`, `reflective` — ou `{"path": "arquivo.mp3"}`)
 (arquivo local com licença livre) e `defaults` (estilo visual comum, transição padrão, modo rápido).
 
-**Limite de 120 s:** ≈ 1.500 caracteres de narração no total. O `--dry-run` avisa antes de gerar.
+**Limite de 120 s:** ≈ 1.400–1.500 caracteres de narração no total. O `--dry-run` avisa antes de gerar.
+**Duração exata:** com `format.target_seconds: 120`, a sobra de tempo vira pausas iguais entre as cenas.
+Exemplo completo em espanhol, 9:16 1080×1920, 12 cenas: [`examples/fe-catolica-hijos-es.json`](examples/fe-catolica-hijos-es.json).
 **Reaproveitamento:** rodar de novo com o mesmo `output_name` só regenera o que mudou.
 
 Resultado em `outputs/<output_name>/`: `<nome>.mp4`, `<nome>.srt`, `thumbnail.jpg`, `manifest.json`

@@ -7,6 +7,7 @@
 import { z } from 'zod';
 import { MAX_VIDEO_SECONDS } from './config.mjs';
 import { MOTIONS, TRANSITIONS, totalDuration, clipStarts } from './media.mjs';
+import { MOODS } from './music.mjs';
 
 export const LEAD_IN = 0.35; // silence before a scene's narration starts
 export const TAIL = 0.45; // breathing room after it ends
@@ -51,6 +52,8 @@ export const StoryboardSchema = z.object({
         aspect_ratio: z.enum(['16:9', '9:16', '1:1']).default('16:9'),
         resolution: z.enum(['480p', '720p', '1080p']).default('720p'),
         fps: z.number().int().min(12).max(60).default(30),
+        target_seconds: z.number().min(5).max(600).optional()
+            .describe('Duração exata desejada: pausas extras são distribuídas entre as cenas para fechar neste tempo'),
     }).default({}),
     voice: z.object({
         engine: z.enum(['auto', 'piper', 'sapi', 'espeak', 'none']).default('auto'),
@@ -65,10 +68,12 @@ export const StoryboardSchema = z.object({
         position: z.enum(['bottom', 'top']).default('bottom'),
     }).default({}),
     music: z.object({
-        path: z.string().describe('Arquivo de música local (mp3/wav/m4a). Use só músicas com licença livre.'),
+        path: z.string().optional().describe('Arquivo de música local (mp3/wav/m4a). Use só músicas com licença livre.'),
+        generate: z.boolean().optional().describe('Gerar uma trilha instrumental original (livre de direitos) do tamanho do vídeo'),
+        mood: z.enum(MOODS).default('emotional').describe('Clima da trilha gerada'),
         volume: z.number().min(0).max(1).default(0.18),
         duck: z.boolean().default(true).describe('Abaixar a música enquanto há narração'),
-    }).optional(),
+    }).refine((m) => m.path || m.generate, { message: 'informe music.path (arquivo) ou music.generate: true' }).optional(),
     defaults: z.object({
         transition: Transition.default('fade'),
         transition_duration: z.number().min(0).max(2).default(0.6),
@@ -108,36 +113,68 @@ export function slugify(text) {
 }
 
 // narrationSeconds[i] is the narration audio length of scene i (0 when silent).
+// All times are snapped to whole frames so clips, xfade offsets and the final
+// length agree exactly. With format.target_seconds the spare time is spread
+// evenly over the scenes (longer pauses) so the video lands on that length.
 export function planTimeline(storyboard, narrationSeconds) {
     const scenes = storyboard.scenes;
     const n = scenes.length;
+    const fps = storyboard.format?.fps || 30;
+    const snap = (t) => Math.round(t * fps) / fps;
+    const snapUp = (t) => Math.ceil(t * fps - 1e-6) / fps;
     const transitions = [];
     for (let i = 0; i < n - 1; i++) {
         const type = scenes[i].transition || storyboard.defaults.transition;
         const requested = scenes[i].transition_duration ?? storyboard.defaults.transition_duration;
-        transitions.push({ type, duration: type === 'cut' || requested <= 0 ? CUT_DURATION : Math.min(1.5, requested) });
+        const duration = type === 'cut' || requested <= 0 ? CUT_DURATION : Math.min(1.5, requested);
+        transitions.push({ type, duration: Math.max(1 / fps, snap(duration)) });
     }
     const durations = scenes.map((scene, i) => {
         const tIn = i > 0 ? transitions[i - 1].duration : 0;
         const tOut = i < n - 1 ? transitions[i].duration : 0;
         const narr = narrationSeconds[i] || 0;
         const needed = narr > 0 ? LEAD_IN + narr + TAIL + tOut : MIN_SCENE;
-        return Number(Math.max(scene.duration || 0, needed, MIN_SCENE, tIn + tOut + 0.5).toFixed(3));
+        return snapUp(Math.max(scene.duration || 0, needed, MIN_SCENE, tIn + tOut + 0.5));
     });
-    const starts = clipStarts(durations, transitions.map((t) => t.duration));
-    const total = totalDuration(durations, transitions.map((t) => t.duration));
+    const tDur = transitions.map((t) => t.duration);
+    const natural = totalDuration(durations, tDur);
+    const target = storyboard.format?.target_seconds;
+    let padding = 0;
+    let targetError = null;
+    if (target) {
+        if (natural > target + 1e-6) {
+            targetError = `A narração precisa de ${natural.toFixed(1)} s, mais que a duração-alvo de ${target} s.`;
+        } else if (natural < target) {
+            const extraFrames = Math.round((target - natural) * fps);
+            const each = Math.floor(extraFrames / n);
+            let rest = extraFrames - each * n;
+            for (let i = 0; i < n; i++) {
+                const add = each + (rest > 0 ? 1 : 0);
+                if (rest > 0) rest--;
+                durations[i] = Math.round((durations[i] + add / fps) * fps) / fps;
+            }
+            padding = extraFrames / fps / n;
+        }
+    }
+    const starts = clipStarts(durations, tDur);
+    const total = Math.round(totalDuration(durations, tDur) * fps) / fps;
     return {
         durations,
         transitions,
         starts,
         narrationStarts: starts.map((s) => s + LEAD_IN),
         total: Number(total.toFixed(3)),
+        natural_seconds: Number(natural.toFixed(3)),
+        padding_per_scene: Number(padding.toFixed(3)),
+        target_seconds: target || null,
+        targetError,
         maxSeconds: MAX_VIDEO_SECONDS,
-        withinLimit: total <= MAX_VIDEO_SECONDS + 0.05,
+        withinLimit: total <= MAX_VIDEO_SECONDS + 0.05 && !targetError,
     };
 }
 
 export function limitError(plan) {
+    if (plan.targetError) return new Error(`${plan.targetError} Encurte a narração ou aumente format.target_seconds.`);
     const perScene = plan.durations.map((d, i) => `cena ${i + 1}: ${d.toFixed(1)} s`).join(', ');
     return new Error(`O vídeo teria ${plan.total.toFixed(1)} s, acima do limite de ${plan.maxSeconds} s. `
         + `Encurte a narração ou remova cenas (${perScene}).`);

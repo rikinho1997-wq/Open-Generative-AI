@@ -33,10 +33,10 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 {
   "title": "Título do vídeo",
   "output_name": "nome-da-pasta",
-  "format": { "aspect_ratio": "16:9", "resolution": "720p", "fps": 30 },
+  "format": { "aspect_ratio": "16:9", "resolution": "720p", "fps": 30, "target_seconds": 120 },
   "voice": { "voice": "pt_BR-faber-medium", "speed": 1.0 },
   "subtitles": { "enabled": true, "burn": true },
-  "music": { "path": "C:/musicas/trilha-livre.mp3", "volume": 0.18 },
+  "music": { "generate": true, "mood": "emotional", "volume": 0.16 },
   "defaults": { "transition": "fade", "style": "photorealistic, cinematic lighting", "fast": true },
   "scenes": [
     { "visual": { "type": "color", "color": "#0b1f3a", "subtitle": "subtítulo" }, "narration": "Abertura…" },
@@ -47,18 +47,26 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 }
 ```
 
-- `music` é opcional e deve ser um arquivo local com licença livre fornecido pelo usuário.
+- `music` é opcional: `generate: true` cria uma trilha instrumental original livre de direitos (moods: emotional, hopeful,
+  calm, reflective); ou `path` para um arquivo local com licença livre fornecido pelo usuário.
+- `format.target_seconds`: duração exata; a sobra vira pausas entre cenas (a narração precisa caber).
 - Formatos: `16:9` (YouTube), `9:16` (Reels/Shorts/TikTok), `1:1` (feed).
-- Transições: fade, fadeblack, fadewhite, dissolve, wipeleft, wiperight, slideleft, slideright, circleopen, radial, zoomin, pixelize, cut…
+- Transições: fade, fadeblack, fadewhite, dissolve, smoothleft/right/up/down, wipeleft, wiperight, slideleft, slideright, circleopen, radial, zoomin, pixelize, cut…
+- Vozes: pt-BR `pt_BR-faber-medium`/`pt_BR-cadu-medium`; espanhol latino `es_MX-claude-high` (feminina) ou `es_AR-daniela-high`
+  (baixe com `oga_download_model`). Use `language` coerente (ex. `es-MX`).
 - Movimento da imagem (`visual.motion`): auto, zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, static.
 - `type: "video"` sem Wan2GP vira imagem animada automaticamente (`defaults.video_fallback_to_image`).
 
 ## Como escrever bem
 
-- **Duração:** a narração define o tempo (~14 caracteres/s em pt-BR). 120 s ≈ 1.500 caracteres de narração no total.
+- **Duração:** a narração define o tempo (~14 caracteres/s). 120 s com 12 cenas ≈ 1.400 caracteres de narração.
+  Meça antes: o `dry_run` estima; a duração real vem do áudio.
   Bom padrão: 6–10 cenas de 1–2 frases cada.
 - **Prompts visuais em inglês**: sujeito + ambiente + luz + estilo. Ex.: `"elderly fisherman mending nets on a wooden pier at dawn, soft mist"`.
   Os modelos locais (SD 1.5) não escrevem texto: coloque textos em `title` da cena, nunca no prompt.
+- No modo rápido (`fast`, padrão) o prompt negativo é ignorado: descreva no prompt positivo o que deve aparecer
+  (ex.: roupas recatadas, "seen from behind", planos abertos — rostos de perto saem piores no SD 1.5).
+- Confira as imagens geradas (pasta `visuals/`); para refazer uma cena, mude o `seed` dela e rode de novo.
 - Mantenha o mesmo `style` em `defaults` para unidade visual; use `seed` fixo numa cena para reproduzi-la.
 - Narração: frases curtas, números por extenso quando a pronúncia importar ("dois mil e vinte e seis").
 
