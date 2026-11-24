@@ -110,14 +110,16 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
         const key = hash({ text, voice: sb.voice, language: sb.language });
         const out = path.join(projectDir, 'narration', `scene-${pad(i)}-${key}.wav`);
         let result;
-        if (fs.existsSync(out)) {
-            result = { path: out, duration: (await probeMedia(out)).duration, engine: 'cache' };
+        const cached = fs.existsSync(out);
+        if (cached) {
+            result = { path: out, duration: (await probeMedia(out)).duration, engine: sb.voice.engine === 'auto' ? 'tts' : sb.voice.engine, voice: sb.voice.voice };
         } else {
             result = await synthesize({ text, outPath: out, engine: sb.voice.engine, voice: sb.voice.voice, speed: sb.voice.speed, language: sb.language, signal });
-            engines.add(`voz: ${result.engine}${result.voice ? ` (${result.voice})` : ''}`);
         }
+        engines.add(`voz: ${result.engine}${result.voice ? ` (${result.voice})` : ''}`);
         narration.push(result);
         report[i].narration_seconds = Number(result.duration.toFixed(2));
+        report[i].narration_source = cached ? 'cache' : 'gerada agora';
     }
 
     // 2. Timeline (real durations) ─────────────────────────────────────────────
@@ -179,11 +181,11 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
             const cached = fs.readdirSync(path.join(projectDir, 'visuals')).find((f) => f.startsWith(`scene-${pad(i)}-${key}.`));
             progress('visuais', base, `Clipe de vídeo da cena ${i + 1}/${n}`);
             const out = cached
-                ? { path: path.join(projectDir, 'visuals', cached), engine: 'cache' }
+                ? { path: path.join(projectDir, 'visuals', cached), engine: params.provider === 'muapi' ? 'muapi (PAGO)' : 'wan2gp (gratuito)', cached: true }
                 : await generateClipAny({ ...params, outPath: path.join(projectDir, 'visuals', `scene-${pad(i)}-${key}.mp4`) }, { signal, onProgress });
             engines.add(`vídeo: ${out.engine}`);
             visuals.push({ kind: 'video', path: out.path });
-            report[i].source = out.engine;
+            report[i].source = out.cached ? `${out.engine} — cache` : out.engine;
             continue;
         }
 
@@ -203,11 +205,11 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
         const cached = fs.readdirSync(path.join(projectDir, 'visuals')).find((f) => f.startsWith(`scene-${pad(i)}-${key}.`));
         progress('visuais', base, `Imagem da cena ${i + 1}/${n}`);
         const out = cached
-            ? { path: path.join(projectDir, 'visuals', cached), engine: 'cache' }
+            ? { path: path.join(projectDir, 'visuals', cached), engine: { local: 'sd.cpp (local, gratuito)', wan2gp: 'wan2gp (gratuito)', muapi: 'muapi (PAGO)' }[provider], cached: true }
             : await generateImageAny({ ...params, outPath: path.join(projectDir, 'visuals', `scene-${pad(i)}-${key}.png`) }, { signal, onProgress });
-        engines.add(`imagem: ${out.engine}`);
+        engines.add(`imagem: ${out.engine}${provider === 'local' ? ` — ${params.model}${params.fast ? ' + LCM' : ''}` : ''}`);
         visuals.push({ kind: 'image', path: out.path });
-        report[i].source = out.engine;
+        report[i].source = out.cached ? `${out.engine} — cache` : out.engine;
     }
 
     // 4. Scene clips ─────────────────────────────────────────────────────────────

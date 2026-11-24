@@ -71,7 +71,8 @@ test('renders a narrated, subtitled multi-scene video with transitions and music
 
         // Second run reuses narration from the project cache.
         const again = await produceVideo(JSON.parse(fs.readFileSync(path.join(result.project_dir, 'storyboard.json'), 'utf-8')));
-        assert.ok(!again.engines.some((e) => e.startsWith('voz:')), 'narration should come from cache');
+        assert.ok(again.scenes.filter((r) => r.narration_seconds).every((r) => r.narration_source === 'cache'), 'narration should come from cache');
+        assert.ok(again.engines.some((e) => e.startsWith(`voz: ${ttsEngine}`)), 'engines still name the voice engine');
     });
     fs.rmSync(dir, { recursive: true, force: true });
 });

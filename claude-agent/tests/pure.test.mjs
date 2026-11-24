@@ -165,6 +165,10 @@ test('long sentences split into balanced chunks without orphans', () => {
     const chunks = chunkWords('Primeira dica: troque lâmpadas antigas por lâmpadas de LED.', 52);
     assert.equal(chunks.length, 2);
     assert.ok(Math.min(...chunks.map((c) => c.length)) >= 20, JSON.stringify(chunks));
+    // A comma break must not leave an orphan at the end of the sentence.
+    const withComma = chunkWords('Se transmite en casa, todos los días, con pequeños gestos llenos de amor que tus hijos nunca olvidarán.', 52);
+    assert.equal(withComma[0], 'Se transmite en casa, todos los días,');
+    assert.ok(Math.min(...withComma.map((c) => c.length)) >= 25, JSON.stringify(withComma));
 });
 
 test('titles wrap and shrink to fit portrait and landscape frames', () => {

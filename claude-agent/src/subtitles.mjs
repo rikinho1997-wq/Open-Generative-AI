@@ -8,28 +8,20 @@ const SENTENCE_RE = /[^.!?…]+(?:[.!?…]+["'”’)\]]*|$)/g;
 // cue never ends with an orphan like "de LED.". Breaks after a comma when one is
 // close to the target length.
 export function chunkWords(sentence, limit) {
-    const words = sentence.split(' ').filter(Boolean);
-    const count = Math.ceil(sentence.length / limit);
-    const target = sentence.length / count;
-    const chunks = [];
-    let current = '';
-    for (const word of words) {
-        const next = current ? `${current} ${word}` : word;
-        const closerNow = Math.abs(current.length - target) <= Math.abs(next.length - target);
-        const lastChunk = chunks.length >= count - 1;
-        if (current && (next.length > limit || (!lastChunk && next.length > target && closerNow))) {
-            chunks.push(current);
-            current = word;
-        } else {
-            current = next;
-        }
-        if (!lastChunk && /[,;:]$/.test(current) && current.length >= target * 0.7) {
-            chunks.push(current);
-            current = '';
-        }
+    const text = sentence.trim();
+    if (text.length <= limit) return [text];
+    const target = text.length / Math.ceil(text.length / limit);
+    let best = null;
+    for (let i = 1; i < text.length; i++) {
+        if (text[i] !== ' ') continue;
+        const left = text.slice(0, i);
+        if (left.length > limit) break;
+        // A comma near the target is the most natural place to cut.
+        const score = Math.abs(left.length - target) - (/[,;:]$/.test(left) ? target * 0.35 : 0);
+        if (!best || score < best.score) best = { score, i };
     }
-    if (current) chunks.push(current);
-    return chunks;
+    if (!best) return [text.slice(0, limit), ...chunkWords(text.slice(limit), limit)];
+    return [text.slice(0, best.i), ...chunkWords(text.slice(best.i + 1), limit)];
 }
 
 export function wrapLines(text, maxChars) {
