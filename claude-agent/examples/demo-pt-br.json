@@ -1,0 +1,52 @@
+{
+  "title": "Energia solar em 1 minuto",
+  "output_name": "demo-energia-solar",
+  "language": "pt-BR",
+  "format": { "aspect_ratio": "16:9", "resolution": "720p", "fps": 30 },
+  "voice": { "engine": "auto", "voice": "pt_BR-faber-medium", "speed": 1.0 },
+  "subtitles": { "enabled": true, "burn": true },
+  "defaults": {
+    "transition": "fade",
+    "transition_duration": 0.6,
+    "image_model": "dreamshaper-8",
+    "fast": true,
+    "style": "photorealistic, cinematic lighting, high detail",
+    "motion": "auto"
+  },
+  "scenes": [
+    {
+      "visual": { "type": "color", "color": "#0b1f3a", "subtitle": "Feito com Open Generative AI + Claude" },
+      "narration": "Você sabe como a luz do sol vira eletricidade? Vamos explicar em um minuto.",
+      "transition": "fadeblack"
+    },
+    {
+      "visual": { "type": "image", "prompt": "wide aerial view of a large solar farm in a green valley at golden hour" },
+      "title": "1. Os painéis",
+      "narration": "Tudo começa nos painéis solares, formados por células de silício que reagem à luz.",
+      "transition": "slideleft"
+    },
+    {
+      "visual": { "type": "image", "prompt": "macro close-up of a blue photovoltaic solar cell surface with sunlight reflections" },
+      "title": "2. As células",
+      "narration": "Quando a luz atinge essas células, ela libera elétrons e cria uma corrente elétrica contínua.",
+      "transition": "circleopen"
+    },
+    {
+      "visual": { "type": "image", "prompt": "electrical solar inverter box mounted on a white wall in a clean modern garage" },
+      "title": "3. O inversor",
+      "narration": "Um inversor transforma essa corrente contínua em corrente alternada, a mesma das tomadas de casa.",
+      "transition": "wipeleft"
+    },
+    {
+      "visual": { "type": "image", "prompt": "modern house with solar panels on the roof, blue sky, sunny day, tropical garden" },
+      "title": "4. Sua casa",
+      "narration": "A energia abastece a casa, e o excedente vai para a rede, gerando créditos na conta de luz.",
+      "transition": "fadeblack"
+    },
+    {
+      "visual": { "type": "color", "color": "#14532d", "subtitle": "Energia limpa e renovável" },
+      "title": "Obrigado!",
+      "narration": "Energia limpa, renovável e cada vez mais acessível. Obrigado por assistir!"
+    }
+  ]
+}

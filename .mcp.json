@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "open-generative-ai": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["claude-agent/src/server.mjs"],
+      "env": {
+        "NODE_USE_ENV_PROXY": "1",
+        "OGA_OUTPUT_DIR": "${OGA_OUTPUT_DIR:-}",
+        "OGA_ALLOW_PAID": "${OGA_ALLOW_PAID:-0}",
+        "MUAPI_API_KEY": "${MUAPI_API_KEY:-}"
+      }
+    }
+  }
+}

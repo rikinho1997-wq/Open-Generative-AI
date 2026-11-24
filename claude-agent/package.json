@@ -1,0 +1,24 @@
+{
+  "name": "open-generative-ai-claude-agent",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server + CLI that let Claude generate images, narrated multi-scene videos (up to 120 s) with Open Generative AI — free local engines first, paid MuAPI only on explicit opt-in.",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "oga": "bin/oga.mjs",
+    "oga-mcp": "src/server.mjs"
+  },
+  "scripts": {
+    "mcp": "node src/server.mjs",
+    "doctor": "node bin/oga.mjs doctor",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "zod": "^3.25.76"
+  }
+}

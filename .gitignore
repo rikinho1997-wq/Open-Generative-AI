@@ -36,3 +36,6 @@ out/
 .env
 .env.*
 !.env.example
+
+# Claude agent outputs (generated media)
+outputs/
