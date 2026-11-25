@@ -19,6 +19,7 @@ import { previewBase64 } from './media.mjs';
 import { dryRun, generateClipAny, generateImageAny, produceVideo } from './producer.mjs';
 import { StoryboardSchema, slugify } from './storyboard.mjs';
 import { RECOMMENDED_VOICES, availableTtsEngines, downloadPiperVoice, listPiperVoices, synthesize } from './tts.mjs';
+import * as youtube from './youtube/index.mjs';
 
 // stdout carries the MCP protocol; anything a dependency logs must go to stderr.
 console.log = (...args) => console.error(...args);
@@ -35,7 +36,9 @@ Regras:
 4. Escreva prompts visuais em inglês, sem pedir texto escrito na imagem; títulos vão no campo "title" da cena.
 5. Tarefas longas retornam job_id: acompanhe com oga_job_status (wait_seconds até ${MAX_WAIT}).
 6. Comece com oga_doctor para saber o que está instalado.
-7. Ao terminar um vídeo, entregue SEMPRE o MP4 ao usuário como anexo para download (não apenas o caminho), com o sha256 do resultado.`;
+7. Ao terminar um vídeo, entregue SEMPRE o MP4 ao usuário como anexo para download (não apenas o caminho), com o sha256 do resultado.
+8. YouTube: só envie (oga_youtube_upload) quando o usuário pedir aquele envio. O padrão é PRIVADO; use unlisted, public ou
+   publish_at somente se o usuário pedir explicitamente. Nunca peça nem mostre client_secret, códigos ou tokens no chat.`;
 
 const server = new McpServer(
     { name: 'open-generative-ai', version: '1.0.0' },
@@ -291,6 +294,82 @@ server.registerTool('oga_configure_wan2gp', {
     try {
         const config = writeWan2gpConfig(args);
         return { content: [text({ config, status: await wan2gpStatus({ probe: true }) })] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+// ─── YouTube Data API v3 ─────────────────────────────────────────────────────
+
+server.registerTool('oga_youtube_status', {
+    title: 'YouTube: status',
+    description: 'Mostra se o cliente OAuth está configurado, se o canal está autorizado (youtube.upload), onde o cofre de credenciais fica e o histórico de envios. Nunca mostra segredos.',
+    inputSchema: {},
+    annotations: { readOnlyHint: true },
+}, async () => {
+    try {
+        return { content: [text({ ...(await youtube.status()), uploads: youtube.uploadHistory().slice(-10) })] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+server.registerTool('oga_youtube_authorize', {
+    title: 'YouTube: autorizar pelo navegador',
+    description: 'Abre o navegador DESTE computador na tela de consentimento do Google (OAuth com PKCE, escopo youtube.upload) e guarda os tokens no cofre local criptografado. '
+        + 'Requer o cliente configurado antes (oga youtube setup --client-secret). O usuário conclui a autorização no navegador; acompanhe com oga_job_status.',
+    inputSchema: { wait_seconds: waitSchema },
+    annotations: { openWorldHint: true },
+}, async ({ wait_seconds: wait = 5 }) => {
+    try {
+        const job = startJob('youtube-auth', 'Autorização do YouTube', ({ signal, log }) => youtube.authorize({ log, signal }));
+        return { content: [text(await waitForJob(job.id, wait))] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+server.registerTool('oga_youtube_upload', {
+    title: 'YouTube: enviar vídeo',
+    description: 'Envia um MP4 ao canal pela YouTube Data API v3 (envio resumível), com título, descrição, tags, idioma, categoria, thumbnail e visibilidade. '
+        + 'PADRÃO: privado. Agendamento (publish_at) mantém o vídeo privado até a hora marcada. Use somente quando o usuário pedir o envio.',
+    inputSchema: {
+        file: z.string().optional().describe('Caminho do .mp4 (pode vir do metadata_file)'),
+        metadata_file: z.string().optional().describe('JSON com os campos abaixo (ex.: productions/.../youtube-ep01.json)'),
+        title: z.string().max(100).optional(),
+        description: z.string().max(5000).optional(),
+        tags: z.array(z.string()).optional(),
+        category_id: z.string().optional().describe('28 = Ciência e tecnologia, 27 = Educação'),
+        privacy: z.enum(['private', 'unlisted', 'public']).optional().describe('Padrão private. Público/não listado só com pedido explícito do usuário.'),
+        publish_at: z.string().optional().describe('Agendamento ISO 8601 (ex. 2026-12-01T18:00:00-03:00); o vídeo fica privado até lá'),
+        made_for_kids: z.boolean().optional(),
+        contains_synthetic_media: z.boolean().optional().describe('Declaração de conteúdo realista gerado/alterado por IA'),
+        language: z.string().optional().describe('Ex.: pt-BR'),
+        thumbnail: z.string().optional().describe('JPG/PNG até 2 MB (canal verificado)'),
+        notify_subscribers: z.boolean().optional(),
+        allow_duplicate: z.boolean().optional().describe('Enviar mesmo que o arquivo já tenha sido enviado antes'),
+        wait_seconds: waitSchema,
+    },
+    annotations: { openWorldHint: true },
+}, async ({ wait_seconds: wait = DEFAULT_WAIT, ...args }) => {
+    try {
+        const req = youtube.resolveUploadRequest(args); // validates paths before queueing
+        const job = startJob('youtube-upload', `YouTube: ${req.title || path.basename(req.file)}`, ({ signal, progress, log }) =>
+            youtube.upload(args, { signal, log, onProgress: (p) => progress('enviando', p) }));
+        return { content: [text(await waitForJob(job.id, wait))] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+server.registerTool('oga_youtube_logout', {
+    title: 'YouTube: revogar acesso',
+    description: 'Revoga a autorização no Google e apaga o token local. O cliente OAuth continua configurado.',
+    inputSchema: {},
+    annotations: { destructiveHint: true },
+}, async () => {
+    try {
+        return { content: [text(await youtube.revoke())] };
     } catch (err) {
         return errorResult(err);
     }

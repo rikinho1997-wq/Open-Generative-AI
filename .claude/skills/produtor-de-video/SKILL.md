@@ -83,6 +83,13 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 - Antes de entregar: confira quadros (contato a cada 4 s), `freezedetect` (nada parado > 1,5 s), loudness (~-16 LUFS)
   e se nada fica sob as legendas (faixa inferior ~18% do quadro).
 
+## Publicar no YouTube
+
+- Só quando o usuário pedir o envio. `oga_youtube_status` primeiro; sem autorização, oriente pelo `claude-agent/YOUTUBE.md`.
+- `oga_youtube_upload` com `metadata_file` (ex.: `productions/.../youtube-ep01.json`) ou campos diretos. Padrão **privado**;
+  público, não listado ou `publish_at` apenas a pedido explícito. Informe o link `youtu.be` e o do Studio.
+- Nunca peça nem mostre client secret, códigos ou tokens no chat.
+
 ## Ferramentas avulsas
 
 - `oga_generate_image` — uma imagem (retorna prévia). `aspect_ratio`, `model`, `seed`, `fast`.

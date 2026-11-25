@@ -20,6 +20,7 @@ import { dryRun, generateClipAny, generateImageAny, produceVideo } from '../src/
 import { runSetup } from '../src/setup.mjs';
 import { slugify } from '../src/storyboard.mjs';
 import { downloadPiperVoice, listPiperVoices, synthesize } from '../src/tts.mjs';
+import * as youtube from '../src/youtube/index.mjs';
 
 const HELP = `Open Generative AI — CLI do agente (gratuito/local por padrão)
 
@@ -35,6 +36,15 @@ Comandos:
   produce <roteiro.json> [--dry-run] [--plan] [--allow-paid]
                                  --plan: gera só a narração e grava timeline.json (durações reais)
   wan2gp [--dir pasta] [--python exe] [--url http://host:7866/mcp]
+
+YouTube (Data API v3, OAuth — veja claude-agent/YOUTUBE.md):
+  youtube setup --client-secret <client_secret.json>   guarda o cliente OAuth no cofre local (fora do Git)
+  youtube auth                                         autoriza pelo navegador (escopo youtube.upload)
+  youtube status | history
+  youtube upload <video.mp4> [--meta youtube.json] [--title …] [--description-file arq.txt] [--tags a,b]
+                 [--privacy private|unlisted|public] [--publish-at 2026-12-01T18:00:00-03:00]
+                 [--thumbnail thumb.jpg] [--category 28] [--language pt-BR] [--synthetic] [--allow-duplicate]
+  youtube logout                                       revoga o acesso e apaga o token
 
 Pago (MuAPI) só com MUAPI_API_KEY + OGA_ALLOW_PAID=1 + --allow-paid.`;
 
@@ -59,6 +69,19 @@ const { values: opts, positionals } = parseArgs({
         'no-lcm': { type: 'boolean' },
         'dry-run': { type: 'boolean' },
         plan: { type: 'boolean' },
+        'client-secret': { type: 'string' },
+        meta: { type: 'string' },
+        title: { type: 'string' },
+        description: { type: 'string' },
+        'description-file': { type: 'string' },
+        tags: { type: 'string' },
+        privacy: { type: 'string' },
+        'publish-at': { type: 'string' },
+        thumbnail: { type: 'string' },
+        category: { type: 'string' },
+        language: { type: 'string' },
+        synthetic: { type: 'boolean' },
+        'allow-duplicate': { type: 'boolean' },
         'allow-paid': { type: 'boolean' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -169,9 +192,51 @@ async function main() {
         if (Object.keys(cfg).length) writeWan2gpConfig(cfg);
         return print(await wan2gpStatus({ probe: true }));
     }
+    case 'youtube':
+        return youtubeCommand(rest);
     default:
         print(HELP);
         process.exitCode = 2;
+    }
+}
+
+async function youtubeCommand([sub, ...args]) {
+    switch (sub) {
+    case 'setup':
+        if (!opts['client-secret']) throw new Error('Use: youtube setup --client-secret <caminho do client_secret_….json>');
+        return print(await youtube.importClientFile(path.resolve(opts['client-secret'])));
+    case 'auth':
+        return print(await youtube.authorize({ log: (m) => console.error(m) }));
+    case 'status':
+        return print(await youtube.status());
+    case 'history':
+        return print(youtube.uploadHistory());
+    case 'logout':
+        return print(await youtube.revoke());
+    case 'forget-client':
+        return print(await youtube.forgetClient());
+    case 'upload': {
+        const p = progressPrinter('youtube');
+        const result = await youtube.upload({
+            file: args[0],
+            metadata_file: opts.meta,
+            title: opts.title,
+            description: opts.description,
+            description_file: opts['description-file'],
+            tags: opts.tags,
+            privacy: opts.privacy,
+            publish_at: opts['publish-at'],
+            thumbnail: opts.thumbnail,
+            category_id: opts.category,
+            language: opts.language,
+            contains_synthetic_media: opts.synthetic ? true : undefined,
+            allow_duplicate: opts['allow-duplicate'] || undefined,
+        }, { onProgress: (x) => p('enviando', x), log: (m) => process.stderr.write(`\n[youtube] ${m}`) });
+        process.stderr.write('\n');
+        return print(result);
+    }
+    default:
+        throw new Error('Subcomando do YouTube: setup | auth | status | upload | history | logout');
     }
 }
 

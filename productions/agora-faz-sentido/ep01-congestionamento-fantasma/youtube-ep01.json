@@ -1,0 +1,24 @@
+{
+  "file": "outputs/agora-faz-sentido/ep01/entrega/AGORA-FAZ-SENTIDO-ep01-congestionamento-fantasma-1080p.mp4",
+  "title": "Por que o trânsito PARA mesmo SEM nenhum acidente? (Congestionamento fantasma)",
+  "description": "Você já ficou parado no trânsito por vários minutos e, quando a fila voltou a andar, não havia acidente, obra nem carro quebrado? Isso tem nome: *congestionamento fantasma*.\n\nNeste vídeo você vai entender como uma pequena freada de um único motorista, somada ao tempo de reação de quem vem atrás, vira uma *onda de frenagem* que se desloca para trás na estrada — o famoso efeito sanfona. Mostramos também o experimento real em que pesquisadores japoneses colocaram 22 carros numa pista circular, sem nenhum obstáculo, e viram o congestionamento surgir sozinho. E, no fim, o que cada motorista pode fazer para amortecer essas ondas.\n\n⏱️ Capítulos\n0:00 O trânsito parou… sem motivo?\n0:17 Nenhum acidente: o congestionamento fantasma\n0:30 Como uma pequena freada vira uma onda\n0:54 A onda que anda para trás e o experimento no Japão\n1:13 Como evitar: distância, suavidade e controle inteligente\n1:32 Reação em cadeia: agora faz sentido\n\n📚 Referências científicas\n1. Sugiyama, Y. et al. (2008). Traffic jams without bottlenecks — experimental evidence for the physical mechanism of the formation of a jam. New Journal of Physics, 10, 033001. https://doi.org/10.1088/1367-2630/10/3/033001\n2. Stern, R. E. et al. (2018). Dissipation of stop-and-go waves via control of autonomous vehicles: Field experiments. Transportation Research Part C, 89, 205–221. https://doi.org/10.1016/j.trc.2018.02.005\n3. Treiber, M., Hennecke, A. & Helbing, D. (2000). Congested traffic states in empirical observations and microscopic simulations. Physical Review E, 62, 1805–1824. https://doi.org/10.1103/PhysRevE.62.1805\n4. Treiber, M., Kesting, A. & Helbing, D. (2006). Delays, inaccuracies and anticipation in microscopic traffic models. Physica A, 360, 71–88. https://doi.org/10.1016/j.physa.2005.05.001\n5. Treiber, M. & Kesting, A. (2013). Traffic Flow Dynamics: Data, Models and Simulation. Springer. https://doi.org/10.1007/978-3-642-32460-4\n\n🔬 Sobre as animações: as simulações do vídeo usam o Intelligent Driver Model (ref. 3) com tempo de reação humano (ref. 4). A pista circular reproduz as condições do experimento de Sugiyama et al. (22 carros, 230 m). A comparação com o carro de controle inteligente é ilustrativa, inspirada em Stern et al. (2018). Trechos de simulação aparecem em tempo acelerado, como indicado na tela.\n\n🔔 Inscreva-se no AGORA FAZ SENTIDO para descobrir os segredos escondidos no seu cotidiano.\n\n#ciencia #transito #curiosidades #fisica #congestionamento",
+  "tags": [
+    "congestionamento fantasma",
+    "trânsito",
+    "efeito sanfona",
+    "onda de trânsito",
+    "ciência do trânsito",
+    "física do trânsito",
+    "curiosidades científicas",
+    "por que o trânsito para",
+    "engarrafamento",
+    "stop and go",
+    "experimento Sugiyama"
+  ],
+  "category_id": "28",
+  "language": "pt-BR",
+  "privacy": "private",
+  "made_for_kids": false,
+  "notify_subscribers": false,
+  "thumbnail": "outputs/agora-faz-sentido/ep01/entrega/thumbnail-1280x720.jpg"
+}

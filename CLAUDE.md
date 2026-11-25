@@ -14,6 +14,9 @@ Lets Claude generate images, narration and narrated multi-scene videos (≤ 120 
 - It reuses the electron-free modules in `electron/lib/` (model catalogs, sd.cpp runtime helpers, Wan2GP local/MCP
   clients, downloader) — keep those modules free of `electron` imports.
 - Generated media goes to `outputs/` (git-ignored).
+- YouTube upload (`claude-agent/src/youtube/`, guide `claude-agent/YOUTUBE.md`): OAuth desktop flow with PKCE, tokens
+  in an encrypted vault outside the repo, resumable `videos.insert`. Upload only when the user asks; default `private`;
+  `public`/`unlisted`/`publish_at` only on explicit request. Never ask for or echo client secrets, codes or tokens.
 
 ## Rules
 

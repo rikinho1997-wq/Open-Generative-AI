@@ -40,3 +40,9 @@ out/
 # Claude agent outputs (generated media)
 outputs/
 __pycache__/
+
+# YouTube / Google OAuth credentials — never commit
+client_secret*.json
+*client_secret*.json
+token.json
+*.oauth.json

@@ -12,7 +12,7 @@ const SERVER = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'sr
 
 test('MCP server exposes the tools and enforces the free-first policy', async () => {
     const out = fs.mkdtempSync(path.join(os.tmpdir(), 'oga-mcp-'));
-    const env = { ...process.env, OGA_OUTPUT_DIR: out, MUAPI_API_KEY: '', OGA_ALLOW_PAID: '' };
+    const env = { ...process.env, OGA_OUTPUT_DIR: out, MUAPI_API_KEY: '', OGA_ALLOW_PAID: '', OGA_YT_DIR: fs.mkdtempSync(path.join(os.tmpdir(), 'oga-mcp-yt-')) };
     const transport = new StdioClientTransport({ command: process.execPath, args: [SERVER], env, stderr: 'ignore' });
     const client = new Client({ name: 'test', version: '1.0.0' });
     await client.connect(transport);
@@ -22,7 +22,13 @@ test('MCP server exposes the tools and enforces the free-first policy', async ()
         assert.deepEqual(names, [
             'oga_cancel_job', 'oga_configure_wan2gp', 'oga_doctor', 'oga_download_model', 'oga_generate_image',
             'oga_generate_video_clip', 'oga_job_status', 'oga_list_models', 'oga_produce_video', 'oga_text_to_speech',
+            'oga_youtube_authorize', 'oga_youtube_logout', 'oga_youtube_status', 'oga_youtube_upload',
         ]);
+        const yt = tools.find((t) => t.name === 'oga_youtube_upload');
+        assert.deepEqual(yt.inputSchema.properties.privacy.enum, ['private', 'unlisted', 'public']);
+        const ytStatus = JSON.parse((await client.callTool({ name: 'oga_youtube_status', arguments: {} })).content[0].text);
+        assert.equal(ytStatus.authorized, false);
+        assert.ok(!JSON.stringify(ytStatus).includes('client_secret'));
         const produce = tools.find((t) => t.name === 'oga_produce_video');
         assert.ok(produce.inputSchema.properties.storyboard, 'storyboard schema is published to the client');
 
