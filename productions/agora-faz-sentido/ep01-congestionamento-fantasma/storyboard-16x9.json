@@ -1,0 +1,582 @@
+{
+  "title": "Por que o trânsito para mesmo sem nenhum acidente?",
+  "output_name": "afs-ep01-congestionamento-fantasma",
+  "language": "pt-BR",
+  "format": {
+    "aspect_ratio": "16:9",
+    "resolution": "1080p",
+    "fps": 30,
+    "target_seconds": 120,
+    "quality": "high"
+  },
+  "voice": {
+    "engine": "piper",
+    "voice": "pt_BR-faber-medium",
+    "speed": 1.0
+  },
+  "subtitles": {
+    "enabled": true,
+    "burn": true,
+    "max_chars": 40,
+    "font_size": 13
+  },
+  "music": {
+    "generate": true,
+    "mood": "curious",
+    "volume": 0.2,
+    "duck": true
+  },
+  "branding": {
+    "font": "/root/.config/open-generative-ai/local-ai/fonts/Montserrat-ExtraBold.ttf",
+    "font_name": "Montserrat",
+    "title_color": "#FFC20E",
+    "title_box_color": "#0B1F3A@0.88",
+    "subtitle_color": "#FFFFFF",
+    "subtitle_box_color": "#0B1F3A@0.80"
+  },
+  "defaults": {
+    "transition": "fade",
+    "transition_duration": 0.3,
+    "lead_in": 0.05,
+    "tail": 0.12,
+    "min_scene": 2.5,
+    "motion": "auto"
+  },
+  "scenes": [
+    {
+      "narration": "Imagine que você está dirigindo tranquilamente pela estrada.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-01.png",
+        "motion": "zoom_in",
+        "zoom": 0.28
+      },
+      "title": "POR QUE O TRÂNSITO PARA SEM NENHUM ACIDENTE?",
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "traffic",
+          "at": 0,
+          "volume": 0.35,
+          "duration": 9
+        },
+        {
+          "sound": "car_pass",
+          "at": 0.4,
+          "volume": 0.45
+        },
+        {
+          "sound": "swish",
+          "at": -0.15,
+          "volume": 0.35
+        }
+      ]
+    },
+    {
+      "narration": "De repente, todos os carros começam a frear.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-02.png",
+        "motion": "zoom_in",
+        "zoom": 0.3
+      },
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "impact",
+          "at": 0.05,
+          "volume": 0.55
+        },
+        {
+          "sound": "brake",
+          "at": 0.35,
+          "volume": 0.45
+        }
+      ]
+    },
+    {
+      "narration": "Você fica parado durante vários minutos, imaginando que aconteceu algum acidente.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-03.png",
+        "motion": "pan_right",
+        "zoom": 0.16
+      },
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "clock",
+          "at": 0.2,
+          "volume": 0.35,
+          "duration": 4
+        },
+        {
+          "sound": "horn",
+          "at": 2.6,
+          "volume": 0.18
+        }
+      ]
+    },
+    {
+      "narration": "Mas, quando o trânsito volta a andar, não existe absolutamente nada bloqueando a pista.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-04.png",
+        "motion": "zoom_out",
+        "zoom": 0.2
+      },
+      "title": "NADA BLOQUEANDO A PISTA",
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": 0.0,
+          "volume": 0.35
+        },
+        {
+          "sound": "pop",
+          "at": 2.2,
+          "volume": 0.4
+        }
+      ]
+    },
+    {
+      "narration": "Nenhum acidente. Nenhuma obra. Nenhum carro quebrado.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-05.mp4"
+      },
+      "transition": "slideleft",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.2,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 1.02,
+          "volume": 0.5
+        },
+        {
+          "sound": "pop",
+          "at": 1.84,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 2.37,
+          "volume": 0.5
+        },
+        {
+          "sound": "pop",
+          "at": 3.21,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 4.2,
+          "volume": 0.5
+        },
+        {
+          "sound": "swish",
+          "at": 4.07,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Então, o que fez centenas de veículos pararem?",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-05.png",
+        "motion": "zoom_out",
+        "zoom": 0.25
+      },
+      "title": "CENTENAS DE VEÍCULOS",
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": -0.2,
+          "volume": 0.35
+        }
+      ]
+    },
+    {
+      "narration": "A ciência tem uma explicação para isso: o congestionamento fantasma.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-07.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "riser",
+          "at": 0.837,
+          "volume": 0.3
+        },
+        {
+          "sound": "impact",
+          "at": 2.487,
+          "volume": 0.55
+        }
+      ]
+    },
+    {
+      "narration": "Tudo pode começar quando um único motorista reduz ligeiramente a velocidade.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-08.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "car_pass",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "brake",
+          "at": 2.39,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "O motorista de trás percebe essa mudança e precisa reagir.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-09.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 1.496,
+          "volume": 0.4
+        },
+        {
+          "sound": "clock",
+          "at": 2.618,
+          "volume": 0.35,
+          "duration": 1.5
+        }
+      ]
+    },
+    {
+      "narration": "Dependendo da distância entre os veículos e do tempo de reação, ele pode frear um pouco mais.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-10.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.976,
+          "volume": 0.4
+        },
+        {
+          "sound": "pop",
+          "at": 2.569,
+          "volume": 0.4
+        },
+        {
+          "sound": "brake",
+          "at": 3.624,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "O próximo motorista repete esse comportamento.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-11.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "click",
+          "at": 0.51,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 0.985,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 1.46,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 1.935,
+          "volume": 0.45
+        }
+      ]
+    },
+    {
+      "narration": "E assim, uma pequena redução de velocidade pode se transformar em uma enorme onda de frenagem.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-12.mp4"
+      },
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "brake",
+          "at": 4.293,
+          "volume": 0.25
+        }
+      ]
+    },
+    {
+      "narration": "O mais impressionante é que essa onda pode se deslocar para trás, mesmo quando os carros estão tentando avançar.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-13.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "swish",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "whoosh",
+          "at": 3.067,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Pesquisadores já demonstraram esse fenômeno colocando veículos para circular em uma pista fechada.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-14.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.3,
+          "volume": 0.4
+        },
+        {
+          "sound": "ding",
+          "at": 3.085,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Mesmo sem obstáculos, pequenas variações de velocidade foram suficientes para provocar congestionamentos.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-15.mp4"
+      },
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "brake",
+          "at": 3.135,
+          "volume": 0.25
+        },
+        {
+          "sound": "pop",
+          "at": 4.18,
+          "volume": 0.35
+        }
+      ]
+    },
+    {
+      "narration": "Mas será que existe uma maneira de evitar isso?",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-06.png",
+        "motion": "zoom_in",
+        "zoom": 0.25
+      },
+      "title": "DÁ PARA EVITAR?",
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "riser",
+          "at": 0.0,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Manter uma distância segura, evitar acelerações bruscas e dirigir com velocidade mais constante ajuda a reduzir essas ondas.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-17.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "ding",
+          "at": 0.739,
+          "volume": 0.3
+        },
+        {
+          "sound": "ding",
+          "at": 2.078,
+          "volume": 0.3
+        },
+        {
+          "sound": "ding",
+          "at": 3.256,
+          "volume": 0.3
+        },
+        {
+          "sound": "whoosh",
+          "at": 5.141,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Em determinadas condições, sistemas inteligentes de controle de velocidade também podem contribuir para melhorar o fluxo do trânsito.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-18.mp4"
+      },
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.2,
+          "volume": 0.35
+        },
+        {
+          "sound": "ding",
+          "at": 4.017,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Portanto, aquele congestionamento aparentemente sem explicação pode ser resultado de uma reação em cadeia.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-07.png",
+        "motion": "pan_left",
+        "zoom": 0.18
+      },
+      "title": "REAÇÃO EM CADEIA",
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": -0.2,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Uma pequena mudança de velocidade, multiplicada por dezenas de motoristas, pode parar uma estrada inteira.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-20.mp4"
+      },
+      "transition": "dissolve",
+      "sfx": [
+        {
+          "sound": "brake",
+          "at": 0.6,
+          "volume": 0.3
+        },
+        {
+          "sound": "impact",
+          "at": 4.287,
+          "volume": 0.5
+        }
+      ]
+    },
+    {
+      "narration": "O mundo está cheio de fenômenos que parecem não ter explicação.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-08.png",
+        "motion": "zoom_in",
+        "zoom": 0.18
+      },
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "riser",
+          "at": 0.6,
+          "volume": 0.18
+        }
+      ]
+    },
+    {
+      "narration": "Mas, quando entendemos a ciência por trás deles, tudo muda.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-09.png",
+        "motion": "pan_right",
+        "zoom": 0.18
+      },
+      "transition": "fadewhite",
+      "sfx": [
+        {
+          "sound": "whoosh",
+          "at": -0.2,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Agora faz sentido, não é?",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-23.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "impact",
+          "at": 0.05,
+          "volume": 0.5
+        },
+        {
+          "sound": "ding",
+          "at": 0.45,
+          "volume": 0.35
+        }
+      ]
+    },
+    {
+      "narration": "Inscreva-se para descobrir os segredos escondidos no seu cotidiano.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/16x9/scene-24.mp4"
+      },
+      "sfx": [
+        {
+          "sound": "click",
+          "at": 1.21,
+          "volume": 0.6
+        },
+        {
+          "sound": "ding",
+          "at": 1.46,
+          "volume": 0.35
+        }
+      ]
+    }
+  ]
+}

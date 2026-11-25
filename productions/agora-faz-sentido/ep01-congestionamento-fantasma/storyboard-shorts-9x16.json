@@ -1,0 +1,296 @@
+{
+  "title": "Congestionamento fantasma em 50 segundos",
+  "output_name": "afs-ep01-shorts",
+  "language": "pt-BR",
+  "format": {
+    "aspect_ratio": "9:16",
+    "resolution": "1080p",
+    "fps": 30,
+    "quality": "high"
+  },
+  "voice": {
+    "engine": "piper",
+    "voice": "pt_BR-faber-medium",
+    "speed": 1.0
+  },
+  "subtitles": {
+    "enabled": true,
+    "burn": true,
+    "max_chars": 24,
+    "font_size": 11
+  },
+  "music": {
+    "generate": true,
+    "mood": "curious",
+    "volume": 0.2,
+    "duck": true
+  },
+  "branding": {
+    "font": "/root/.config/open-generative-ai/local-ai/fonts/Montserrat-ExtraBold.ttf",
+    "font_name": "Montserrat",
+    "title_color": "#FFC20E",
+    "title_box_color": "#0B1F3A@0.88",
+    "subtitle_color": "#FFFFFF",
+    "subtitle_box_color": "#0B1F3A@0.80"
+  },
+  "defaults": {
+    "transition": "fade",
+    "transition_duration": 0.3,
+    "lead_in": 0.05,
+    "tail": 0.12,
+    "min_scene": 2.5,
+    "motion": "auto"
+  },
+  "scenes": [
+    {
+      "narration": "Você já ficou parado no trânsito e, depois, não viu nenhum acidente?",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/images/afs-02.png",
+        "fit": "blur",
+        "motion": "zoom_in",
+        "zoom": 0.25
+      },
+      "title": "SEM NENHUM ACIDENTE?",
+      "transition": "smoothup",
+      "sfx": [
+        {
+          "sound": "impact",
+          "at": 0.0,
+          "volume": 0.55
+        },
+        {
+          "sound": "brake",
+          "at": 0.25,
+          "volume": 0.4
+        },
+        {
+          "sound": "traffic",
+          "at": 0,
+          "volume": 0.3,
+          "duration": 5
+        }
+      ]
+    },
+    {
+      "narration": "Isso tem nome: congestionamento fantasma.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-02.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "riser",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "impact",
+          "at": 1.131,
+          "volume": 0.55
+        }
+      ]
+    },
+    {
+      "narration": "Tudo começa quando um único motorista reduz um pouco a velocidade.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-03.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "car_pass",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "brake",
+          "at": 2.177,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "O motorista de trás percebe, mas precisa de um tempo para reagir.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-04.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 1.36,
+          "volume": 0.4
+        },
+        {
+          "sound": "clock",
+          "at": 2.636,
+          "volume": 0.35,
+          "duration": 1.5
+        }
+      ]
+    },
+    {
+      "narration": "Ele acaba freando um pouco mais. E o próximo repete o comportamento.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-05.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "click",
+          "at": 0.5,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 1.442,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 2.385,
+          "volume": 0.45
+        },
+        {
+          "sound": "click",
+          "at": 3.327,
+          "volume": 0.45
+        }
+      ]
+    },
+    {
+      "narration": "Assim, uma pequena freada vira uma onda de frenagem que anda para trás.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-06.mp4"
+      },
+      "transition": "smoothleft",
+      "sfx": [
+        {
+          "sound": "swish",
+          "at": 0.0,
+          "volume": 0.3
+        },
+        {
+          "sound": "whoosh",
+          "at": 2.083,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Pesquisadores no Japão provaram isso com vinte e dois carros numa pista circular.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-07.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.3,
+          "volume": 0.4
+        },
+        {
+          "sound": "ding",
+          "at": 2.84,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Mesmo sem obstáculos, o congestionamento surgiu sozinho.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-08.mp4"
+      },
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "brake",
+          "at": 1.77,
+          "volume": 0.25
+        },
+        {
+          "sound": "pop",
+          "at": 2.36,
+          "volume": 0.35
+        }
+      ]
+    },
+    {
+      "narration": "Para evitar, mantenha distância segura, evite acelerações bruscas e dirija em velocidade constante.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-09.mp4"
+      },
+      "transition": "cut",
+      "sfx": [
+        {
+          "sound": "ding",
+          "at": 1.354,
+          "volume": 0.3
+        },
+        {
+          "sound": "ding",
+          "at": 2.668,
+          "volume": 0.3
+        },
+        {
+          "sound": "ding",
+          "at": 3.873,
+          "volume": 0.3
+        },
+        {
+          "sound": "whoosh",
+          "at": 4.607,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Até um único carro com controle inteligente de velocidade ajuda a dissolver as ondas.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-10.mp4"
+      },
+      "transition": "fadeblack",
+      "sfx": [
+        {
+          "sound": "pop",
+          "at": 0.2,
+          "volume": 0.35
+        },
+        {
+          "sound": "ding",
+          "at": 2.517,
+          "volume": 0.3
+        }
+      ]
+    },
+    {
+      "narration": "Agora faz sentido? Inscreva-se para descobrir mais segredos do cotidiano.",
+      "visual": {
+        "type": "file",
+        "path": "outputs/agora-faz-sentido/ep01/anim/9x16/scene-11.mp4"
+      },
+      "sfx": [
+        {
+          "sound": "click",
+          "at": 2.363,
+          "volume": 0.6
+        },
+        {
+          "sound": "ding",
+          "at": 2.613,
+          "volume": 0.35
+        }
+      ]
+    }
+  ]
+}

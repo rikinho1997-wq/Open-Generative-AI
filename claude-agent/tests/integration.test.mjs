@@ -69,6 +69,20 @@ test('renders a narrated, subtitled multi-scene video with transitions and music
         assert.match(result.cost, /R\$ 0/);
         assert.ok(fs.existsSync(path.join(result.project_dir, 'manifest.json')));
 
+        // Relative paths work although ffmpeg runs inside the project folder.
+        const cwd = process.cwd();
+        process.chdir(dir);
+        try {
+            const rel = await produceVideo({
+                title: 'Relativo', output_name: 'relativo', voice: { engine: 'none' },
+                format: { resolution: '480p', fps: 24 },
+                scenes: [{ visual: { type: 'file', path: 'still.png' }, duration: 2 }],
+            });
+            assert.ok(fs.existsSync(rel.video));
+        } finally {
+            process.chdir(cwd);
+        }
+
         // Second run reuses narration from the project cache.
         const again = await produceVideo(JSON.parse(fs.readFileSync(path.join(result.project_dir, 'storyboard.json'), 'utf-8')));
         assert.ok(again.scenes.filter((r) => r.narration_seconds).every((r) => r.narration_source === 'cache'), 'narration should come from cache');

@@ -32,7 +32,8 @@ Comandos:
   image "<prompt>" [--ar 16:9] [--model id] [--steps n] [--seed n] [--no-fast] [--out arquivo.png]
   tts "<texto>" [--voice v] [--engine piper|sapi|espeak] [--speed 1.0] [--out arquivo.wav]
   clip "<prompt>" [--model id] [--seconds 5] [--image quadro.png]   (Wan2GP, requer GPU)
-  produce <roteiro.json> [--dry-run] [--allow-paid]
+  produce <roteiro.json> [--dry-run] [--plan] [--allow-paid]
+                                 --plan: gera só a narração e grava timeline.json (durações reais)
   wan2gp [--dir pasta] [--python exe] [--url http://host:7866/mcp]
 
 Pago (MuAPI) só com MUAPI_API_KEY + OGA_ALLOW_PAID=1 + --allow-paid.`;
@@ -57,6 +58,7 @@ const { values: opts, positionals } = parseArgs({
         'no-fast': { type: 'boolean' },
         'no-lcm': { type: 'boolean' },
         'dry-run': { type: 'boolean' },
+        plan: { type: 'boolean' },
         'allow-paid': { type: 'boolean' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -149,6 +151,7 @@ async function main() {
         if (!file) throw new Error('Informe o arquivo do roteiro: produce roteiro.json');
         const storyboard = JSON.parse(fs.readFileSync(file, 'utf-8'));
         if (opts['dry-run']) return print(dryRun(storyboard));
+        if (opts.plan) return print(await produceVideo(storyboard, { planOnly: true }));
         const p = progressPrinter('vídeo');
         const result = await produceVideo(storyboard, {
             allowPaid: Boolean(opts['allow-paid']),

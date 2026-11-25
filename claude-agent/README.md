@@ -120,6 +120,17 @@ climas `emotional`, `hopeful`, `calm`, `reflective` — ou `{"path": "arquivo.mp
 Exemplo completo em espanhol, 9:16 1080×1920, 12 cenas: [`examples/fe-catolica-hijos-es.json`](examples/fe-catolica-hijos-es.json).
 **Reaproveitamento:** rodar de novo com o mesmo `output_name` só regenera o que mudou.
 
+**Recursos para produção profissional** (exemplo completo: [`productions/agora-faz-sentido/`](../productions/agora-faz-sentido/)):
+- `scenes[].sfx`: efeitos sonoros sintetizados e livres de direitos (`whoosh`, `swish`, `riser`, `impact`, `brake`,
+  `horn`, `car_pass`, `traffic`, `pop`, `ding`, `click`, `clock`) com `at` (segundos na cena) e `volume`.
+- `branding`: fonte da marca (`font`, `font_name`) e cores de títulos/legendas (`title_color`, `title_box_color`,
+  `subtitle_color`, `subtitle_box_color` — aceita `#RRGGBB@opacidade`).
+- `defaults.lead_in` / `defaults.tail`: pausas antes/depois de cada fala (valores baixos = ritmo dinâmico).
+- `visual.zoom` (intensidade do movimento) e `visual.fit: "blur"` (imagem 16:9 inteira num vídeo 9:16).
+- `format.quality: "high"`: master para upload (CRF 17). `music.mood: "curious"`: trilha rítmica de explicação.
+- `produce --plan` (ou `plan_only` no MCP): gera só a narração e devolve o início/duração reais de cada cena —
+  use para sincronizar animações feitas fora do agente.
+
 Resultado em `outputs/<output_name>/`: `<nome>.mp4`, `<nome>.srt`, `thumbnail.jpg`, `manifest.json`
 (duração, motores usados, custo) e as imagens/áudios de cada cena.
 

@@ -7,7 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ffmpeg } from './media.mjs';
 
-export const MOODS = ['emotional', 'hopeful', 'calm', 'reflective'];
+export const MOODS = ['emotional', 'hopeful', 'calm', 'reflective', 'curious'];
 
 // root = MIDI note of the key's tonic in octave 3; chords as semitones from it.
 const PRESETS = {
@@ -15,6 +15,7 @@ const PRESETS = {
     hopeful: { root: 55, bpm: 72, chords: [[5, 9, 12], [0, 4, 7], [7, 11, 14], [9, 12, 16]] }, // G: IV I V vi
     calm: { root: 48, bpm: 60, chords: [[0, 4, 7], [9, 12, 16], [5, 9, 12], [7, 11, 14]] }, // C: I vi IV V
     reflective: { root: 57, bpm: 60, chords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]] }, // Am: i VI III VII
+    curious: { root: 52, bpm: 96, chords: [[0, 3, 7], [-4, 0, 3], [-7, -3, 0], [-2, 2, 5]] }, // Em: i VI iv VII, explainer pulse
 };
 
 const SR = 44100;

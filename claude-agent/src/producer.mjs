@@ -13,6 +13,7 @@ import { DEFAULT_IMAGE_MODEL, generateLocalImage } from './engines/sdcpp.mjs';
 import { DEFAULT_VIDEO_MODEL, generateWan2gp, wan2gpStatus } from './engines/wan2gp.mjs';
 import { paidGenerateImage, paidGenerateVideo } from './engines/muapi.mjs';
 import {
+    setEncodeQuality,
     assembleVideo, extractThumbnail, mixAudio, muxFinal, outputSize, pickMotion, probeMedia,
     renderColorScene, renderImageScene, renderVideoScene, subtitleStyle,
 } from './media.mjs';
@@ -20,6 +21,7 @@ import { estimateNarrationSeconds, limitError, parseStoryboard, planTimeline, sl
 import { splitCues, timeCues, toSrt } from './subtitles.mjs';
 import { synthesize } from './tts.mjs';
 import { generateMusic } from './music.mjs';
+import { generateSfx } from './sfx.mjs';
 
 const IMAGE_EXTENSIONS = new Set(['.png', '.jpg', '.jpeg', '.webp', '.bmp']);
 
@@ -75,13 +77,27 @@ export function dryRun(input) {
 
 // ─── Full production ─────────────────────────────────────────────────────────
 
-export async function produceVideo(input, { allowPaid = false, signal, progress = () => {}, log = () => {} } = {}) {
-    const sb = parseStoryboard(input);
+// ffmpeg runs inside the project folder, so every user-supplied path is made
+// absolute (relative paths are relative to where the CLI/MCP server runs).
+function absolutize(sb) {
+    for (const scene of sb.scenes) {
+        if (scene.visual.path) scene.visual.path = path.resolve(scene.visual.path);
+    }
+    if (sb.music?.path) sb.music.path = path.resolve(sb.music.path);
+    if (sb.branding?.font) sb.branding.font = path.resolve(sb.branding.font);
+    return sb;
+}
+
+export async function produceVideo(input, { allowPaid = false, planOnly = false, signal, progress = () => {}, log = () => {} } = {}) {
+    const sb = absolutize(parseStoryboard(input));
+    setEncodeQuality(sb.format.quality);
     const paidScenes = sb.scenes.filter((s) => s.visual.provider === 'muapi');
     if (paidScenes.length) assertPaidAllowed(allowPaid);
 
     const estimate = dryRun(sb);
-    if (estimate.estimated_narration_fit_seconds > Math.min(estimate.max_seconds, estimate.target_seconds || Infinity) * 1.1) {
+    // Speaking rate varies a lot between voices, so the character-based estimate
+    // only stops gross overruns early; the real audio length is checked below.
+    if (!planOnly && estimate.estimated_narration_fit_seconds > Math.min(estimate.max_seconds, estimate.target_seconds || Infinity) * 1.35) {
         throw new Error(`Estimativa de ${estimate.estimated_total_seconds.toFixed(0)} s excede o limite de ${estimate.max_seconds} s. `
             + 'Encurte a narração ou reduza as cenas.');
     }
@@ -127,6 +143,27 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
     if (!plan.withinLimit) throw limitError(plan);
     log(`Linha do tempo: ${plan.total.toFixed(3)} s em ${n} cenas`
         + (plan.padding_per_scene ? ` (+${plan.padding_per_scene.toFixed(2)} s de pausa por cena para fechar a duração-alvo)` : ''));
+    if (planOnly) {
+        const timeline = {
+            project_dir: projectDir,
+            total_seconds: plan.total,
+            natural_seconds: plan.natural_seconds,
+            padding_per_scene: plan.padding_per_scene,
+            fps,
+            resolution: `${width}x${height}`,
+            scenes: sb.scenes.map((sc, i) => ({
+                scene: i + 1,
+                start: Number(plan.starts[i].toFixed(3)),
+                duration: plan.durations[i],
+                narration_start: Number(plan.narrationStarts[i].toFixed(3)),
+                narration_seconds: narration[i] ? Number(narration[i].duration.toFixed(3)) : 0,
+                transition_out: plan.transitions[i] || null,
+                narration: sc.narration || '',
+            })),
+        };
+        fs.writeFileSync(path.join(projectDir, 'timeline.json'), JSON.stringify(timeline, null, 2));
+        return timeline;
+    }
 
     // 3. Visuals ────────────────────────────────────────────────────────────────
     let wan2gp = null;
@@ -213,19 +250,29 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
     }
 
     // 4. Scene clips ─────────────────────────────────────────────────────────────
+    const branding = sb.branding || null;
+    const brandFont = branding?.font && fs.existsSync(branding.font) ? branding.font : null;
+    if (branding?.font && !brandFont) log(`Fonte da marca não encontrada: ${branding.font} — usando a fonte padrão.`);
+    const brand = brandFont ? { ...branding, font: brandFont } : branding;
     const clips = [];
     for (let i = 0; i < n; i++) {
         progress('montagem das cenas', 0.72 + (i / n) * 0.12, `Renderizando cena ${i + 1}/${n}`);
         const scene = sb.scenes[i];
         const out = path.join(projectDir, 'clips', `scene-${pad(i)}.mp4`);
-        const common = { projectDir, out, duration: plan.durations[i], width, height, fps, title: scene.title, index: i + 1, signal };
+        const common = { projectDir, out, duration: plan.durations[i], width, height, fps, title: scene.title, index: i + 1, branding: brand, signal };
         const visual = visuals[i];
         if (visual.kind === 'color') {
             await renderColorScene({ ...common, color: scene.visual.color, title: scene.title || sb.title, subtitle: scene.visual.subtitle });
         } else if (visual.kind === 'video') {
             await renderVideoScene({ ...common, video: visual.path });
         } else {
-            await renderImageScene({ ...common, image: visual.path, motion: pickMotion(scene.visual.motion || sb.defaults.motion, i) });
+            await renderImageScene({
+                ...common,
+                image: visual.path,
+                motion: pickMotion(scene.visual.motion || sb.defaults.motion, i),
+                zoom: scene.visual.zoom,
+                fit: scene.visual.fit || 'cover',
+            });
         }
         clips.push(out);
         report[i].seconds = plan.durations[i];
@@ -254,7 +301,15 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
         fps,
         out: silentVideo,
         subtitlesFile: hasSubs && sb.subtitles.burn ? srtName : null,
-        style: subtitleStyle({ width, height, fontSize: sb.subtitles.font_size, position: sb.subtitles.position }),
+        style: subtitleStyle({
+            width,
+            height,
+            fontSize: sb.subtitles.font_size,
+            position: sb.subtitles.position,
+            branding: brand,
+            fontName: brandFont ? (branding.font_name || path.basename(brandFont).replace(/\.[^.]+$/, '').split(/[-_ ]/)[0]) : undefined,
+        }),
+        fontsDir: brandFont ? 'fonts' : null,
         signal,
     });
 
@@ -269,12 +324,22 @@ export async function produceVideo(input, { allowPaid = false, signal, progress 
         music = { ...music, path: out };
     }
     if (music?.path && !fs.existsSync(music.path)) throw new Error(`Música não encontrada: ${music.path}`);
+    const sfx = [];
+    for (let i = 0; i < n; i++) {
+        for (const e of sb.scenes[i].sfx || []) {
+            const file = path.join(projectDir, 'sfx', `${e.sound}${e.duration ? `-${e.duration}s` : ''}.wav`);
+            generateSfx(e.sound, file, { duration: e.duration });
+            sfx.push({ path: file, start: Math.max(0, plan.starts[i] + (e.at ?? 0)), volume: e.volume ?? 0.6 });
+        }
+    }
+    if (sfx.length) engines.add(`efeitos sonoros: ${sfx.length} eventos sintetizados localmente (originais)`);
     const audio = path.join(projectDir, 'audio.m4a');
     await mixAudio({
         projectDir,
         narrations: narration.map((r, i) => (r ? { path: r.path, start: plan.narrationStarts[i] } : null)).filter(Boolean),
         total: plan.total,
         music,
+        sfx,
         out: audio,
         signal,
     });

@@ -39,3 +39,4 @@ out/
 
 # Claude agent outputs (generated media)
 outputs/
+__pycache__/

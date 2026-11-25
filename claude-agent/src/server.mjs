@@ -233,12 +233,14 @@ server.registerTool('oga_produce_video', {
     inputSchema: {
         storyboard: StoryboardSchema,
         dry_run: z.boolean().default(false),
+        plan_only: z.boolean().default(false).describe('Gera só a narração e devolve a linha do tempo real (início e duração de cada cena)'),
         allow_paid: z.boolean().default(false).describe('Somente com autorização explícita do usuário'),
         wait_seconds: waitSchema,
     },
-}, async ({ storyboard, dry_run: isDry, allow_paid: allowPaid, wait_seconds: wait = DEFAULT_WAIT }) => {
+}, async ({ storyboard, dry_run: isDry, plan_only: planOnly, allow_paid: allowPaid, wait_seconds: wait = DEFAULT_WAIT }) => {
     try {
         if (isDry) return { content: [text(dryRun(storyboard))] };
+        if (planOnly) return { content: [text(await produceVideo(storyboard, { planOnly: true }))] };
         const job = startJob('video', `Vídeo: ${storyboard.title}`, ({ signal, progress, log }) =>
             produceVideo(storyboard, { allowPaid, signal, progress, log }));
         const view = await waitForJob(job.id, wait);

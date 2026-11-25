@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { MAX_VIDEO_SECONDS } from './config.mjs';
 import { MOTIONS, TRANSITIONS, totalDuration, clipStarts } from './media.mjs';
 import { MOODS } from './music.mjs';
+import { SFX_NAMES } from './sfx.mjs';
 
 export const LEAD_IN = 0.35; // silence before a scene's narration starts
 export const TAIL = 0.45; // breathing room after it ends
@@ -32,6 +33,16 @@ export const VisualSchema = z.object({
     seed: z.number().int().min(0).optional(),
     steps: z.number().int().min(1).max(100).optional(),
     motion: z.enum([...MOTIONS, 'auto']).optional(),
+    zoom: z.number().min(0).max(0.6).optional().describe('Intensidade do movimento de câmera (padrão 0.16)'),
+    fit: z.enum(['cover', 'blur']).optional()
+        .describe('cover = preenche cortando; blur = imagem inteira sobre fundo desfocado (ex.: foto 16:9 num vídeo 9:16)'),
+});
+
+export const SfxSchema = z.object({
+    sound: z.enum(SFX_NAMES),
+    at: z.number().min(-5).max(60).default(0).describe('Segundos a partir do início da cena'),
+    volume: z.number().min(0).max(2).default(0.6),
+    duration: z.number().min(0.5).max(60).optional().describe('Para sons contínuos (traffic, clock)'),
 });
 
 export const SceneSchema = z.object({
@@ -41,6 +52,7 @@ export const SceneSchema = z.object({
     title: z.string().max(140).optional().describe('Texto sobreposto no topo da cena'),
     transition: Transition.optional().describe('Transição PARA a próxima cena'),
     transition_duration: z.number().min(0).max(2).optional(),
+    sfx: z.array(SfxSchema).max(12).optional().describe('Efeitos sonoros sintetizados (livres de direitos) nesta cena'),
 });
 
 export const StoryboardSchema = z.object({
@@ -52,6 +64,7 @@ export const StoryboardSchema = z.object({
         aspect_ratio: z.enum(['16:9', '9:16', '1:1']).default('16:9'),
         resolution: z.enum(['480p', '720p', '1080p']).default('720p'),
         fps: z.number().int().min(12).max(60).default(30),
+        quality: z.enum(['standard', 'high']).default('standard').describe('high = master para upload (CRF 17, mais lento)'),
         target_seconds: z.number().min(5).max(600).optional()
             .describe('Duração exata desejada: pausas extras são distribuídas entre as cenas para fechar neste tempo'),
     }).default({}),
@@ -84,9 +97,21 @@ export const StoryboardSchema = z.object({
         motion: z.enum([...MOTIONS, 'auto']).default('auto'),
         fast: z.boolean().default(true).describe('LCM: 5 passos em vez de 20 (muito mais rápido em CPU)'),
         steps: z.number().int().min(1).max(100).optional(),
+        lead_in: z.number().min(0).max(2).default(LEAD_IN).describe('Silêncio antes da narração de cada cena (s)'),
+        tail: z.number().min(0).max(3).default(TAIL).describe('Respiro depois da narração de cada cena (s)'),
+        min_scene: z.number().min(1).max(10).default(MIN_SCENE),
         video_fallback_to_image: z.boolean().default(true)
             .describe('Se o Wan2GP não estiver disponível, gerar imagem animada no lugar do clipe'),
     }).default({}),
+    branding: z.object({
+        font: z.string().optional().describe('Arquivo .ttf/.otf da fonte da marca (títulos e legendas)'),
+        font_name: z.string().optional().describe('Nome da família da fonte (ex. "Montserrat"), usado nas legendas'),
+        title_color: z.string().default('#FFFFFF'),
+        title_box_color: z.string().default('#000000@0.45'),
+        subtitle_color: z.string().default('#FFFFFF'),
+        subtitle_outline_color: z.string().default('#000000'),
+        subtitle_box_color: z.string().optional().describe('Se definido, legenda em caixa sólida desta cor (ex. "#0B1F3A@0.75")'),
+    }).optional(),
     scenes: z.array(SceneSchema).min(1).max(40),
 });
 
@@ -122,6 +147,9 @@ export function planTimeline(storyboard, narrationSeconds) {
     const fps = storyboard.format?.fps || 30;
     const snap = (t) => Math.round(t * fps) / fps;
     const snapUp = (t) => Math.ceil(t * fps - 1e-6) / fps;
+    const leadIn = storyboard.defaults?.lead_in ?? LEAD_IN;
+    const tail = storyboard.defaults?.tail ?? TAIL;
+    const minScene = storyboard.defaults?.min_scene ?? MIN_SCENE;
     const transitions = [];
     for (let i = 0; i < n - 1; i++) {
         const type = scenes[i].transition || storyboard.defaults.transition;
@@ -133,8 +161,8 @@ export function planTimeline(storyboard, narrationSeconds) {
         const tIn = i > 0 ? transitions[i - 1].duration : 0;
         const tOut = i < n - 1 ? transitions[i].duration : 0;
         const narr = narrationSeconds[i] || 0;
-        const needed = narr > 0 ? LEAD_IN + narr + TAIL + tOut : MIN_SCENE;
-        return snapUp(Math.max(scene.duration || 0, needed, MIN_SCENE, tIn + tOut + 0.5));
+        const needed = narr > 0 ? leadIn + narr + tail + tOut : minScene;
+        return snapUp(Math.max(scene.duration || 0, needed, minScene, tIn + tOut + 0.5));
     });
     const tDur = transitions.map((t) => t.duration);
     const natural = totalDuration(durations, tDur);
@@ -162,7 +190,7 @@ export function planTimeline(storyboard, narrationSeconds) {
         durations,
         transitions,
         starts,
-        narrationStarts: starts.map((s) => s + LEAD_IN),
+        narrationStarts: starts.map((s) => s + leadIn),
         total: Number(total.toFixed(3)),
         natural_seconds: Number(natural.toFixed(3)),
         padding_per_scene: Number(padding.toFixed(3)),

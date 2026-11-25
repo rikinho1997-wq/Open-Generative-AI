@@ -70,6 +70,16 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 - Mantenha o mesmo `style` em `defaults` para unidade visual; use `seed` fixo numa cena para reproduzi-la.
 - Narração: frases curtas, números por extenso quando a pronúncia importar ("dois mil e vinte e seis").
 
+## Produção avançada (canal, explicativos)
+
+- Ritmo dinâmico: `defaults.lead_in: 0.05`, `defaults.tail: 0.12`, transições de 0.3 s; uma frase por cena (3–6 s).
+- Identidade visual: `branding` (fonte .ttf + cores de título e legenda). Efeitos: `scenes[].sfx`.
+- Animações/diagramas próprios: rode `produce --plan` (ou `oga_produce_video` com `plan_only`), renderize os clipes
+  com as durações de `timeline.json` e use-os como `visual.type: "file"`. Exemplo: `productions/agora-faz-sentido/`.
+- Shorts a partir de imagens 16:9: `visual.fit: "blur"`. Master de upload: `format.quality: "high"`.
+- Antes de entregar: confira quadros (contato a cada 4 s), `freezedetect` (nada parado > 1,5 s), loudness (~-16 LUFS)
+  e se nada fica sob as legendas (faixa inferior ~18% do quadro).
+
 ## Ferramentas avulsas
 
 - `oga_generate_image` — uma imagem (retorna prévia). `aspect_ratio`, `model`, `seed`, `fast`.

@@ -210,3 +210,36 @@ test('Realistic Vision gets the ft-MSE VAE flag when requested', () => {
     const args = buildSdCliArgs({ model, modelsDir: '/m', prompt: 'p', outPath: '/o.png', width: 512, height: 896, steps: 6, cfgScale: 1, seed: 1, fast: true, vaePath: '/m/vae.safetensors' });
     assert.deepEqual(args.slice(-2), ['--vae', '/m/vae.safetensors']);
 });
+
+test('procedural sound effects are all generated, bounded and of the right length', async () => {
+    const { SFX_NAMES, synthesizeSfx } = await import('../src/sfx.mjs');
+    for (const name of SFX_NAMES) {
+        const s = synthesizeSfx(name, { duration: 2 });
+        const peak = s.L.reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+        assert.ok(s.L.length > 1000 && peak > 0.1 && peak <= 0.9001, `${name}: peak ${peak}`);
+    }
+    assert.equal(synthesizeSfx('traffic', { duration: 3 }).L.length, 3 * 44100);
+    assert.throws(() => synthesizeSfx('laser'), /desconhecido/);
+});
+
+test('effects get their own bus in the audio mix (not ducked)', () => {
+    const filter = buildAudioMixFilter({ narrations: [{ start: 0.1 }], total: 10, musicIndex: 1, sfx: [{ start: 2.5, volume: 0.4 }, { start: 7 }], sfxStartIndex: 2 });
+    assert.match(filter, /\[2:a\].*volume=0\.400,adelay=delays=2500:all=1\[s0\]/);
+    assert.match(filter, /\[s0\]\[s1\]amix=inputs=2/);
+    assert.match(filter, /\[narrmix\]\[duck\]\[fx\]amix=inputs=3/);
+});
+
+test('brand colours convert to ffmpeg and libass notation', async () => {
+    const { assColor, ffColor } = await import('../src/media.mjs');
+    assert.equal(assColor('#0B1F3A@0.8'), '&H333A1F0B');
+    assert.equal(assColor('#FFFFFF'), '&H00FFFFFF');
+    assert.equal(ffColor('#FFC20E'), '0xFFC20E');
+    assert.equal(ffColor('#0B1F3A@0.5'), '0x0B1F3A@0.5');
+});
+
+test('pacing (lead_in / tail) tightens the gaps between narrated scenes', () => {
+    const loose = planTimeline(parseStoryboard({ title: 'X', scenes: [scene('a'), scene('b')] }), [3, 3]);
+    const tight = planTimeline(parseStoryboard({ title: 'X', defaults: { lead_in: 0.05, tail: 0.1 }, scenes: [scene('a'), scene('b')] }), [3, 3]);
+    assert.ok(tight.total < loose.total - 1);
+    assert.ok(tight.narrationStarts[1] >= tight.narrationStarts[0] + 3);
+});
