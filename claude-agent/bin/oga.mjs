@@ -39,11 +39,14 @@ Comandos:
 
 YouTube (Data API v3, OAuth — veja claude-agent/YOUTUBE.md):
   youtube setup --client-secret <client_secret.json>   guarda o cliente OAuth no cofre local (fora do Git)
-  youtube auth                                         autoriza pelo navegador (escopo youtube.upload)
-  youtube status | history
+  youtube auth [--manage]                              autoriza pelo navegador (--manage: publicar/agendar depois)
+  youtube channel | status | history | videos          canal autorizado, status e vídeos enviados
+  youtube publish <videoId> [--privacy public|unlisted|private]
+  youtube schedule <videoId> --at 2026-12-01T18:00:00-03:00
   youtube upload <video.mp4> [--meta youtube.json] [--title …] [--description-file arq.txt] [--tags a,b]
                  [--privacy private|unlisted|public] [--publish-at 2026-12-01T18:00:00-03:00]
-                 [--thumbnail thumb.jpg] [--category 28] [--language pt-BR] [--synthetic] [--allow-duplicate]
+                 [--thumbnail thumb.jpg | --no-thumbnail] [--category 28] [--language pt-BR] [--synthetic] [--allow-duplicate]
+                 [--expect-channel "AGORA FAZ SENTIDO"] [--paid-placement]
   youtube logout                                       revoga o acesso e apaga o token
 
 Pago (MuAPI) só com MUAPI_API_KEY + OGA_ALLOW_PAID=1 + --allow-paid.`;
@@ -78,10 +81,15 @@ const { values: opts, positionals } = parseArgs({
         privacy: { type: 'string' },
         'publish-at': { type: 'string' },
         thumbnail: { type: 'string' },
+        'no-thumbnail': { type: 'boolean' },
         category: { type: 'string' },
         language: { type: 'string' },
         synthetic: { type: 'boolean' },
         'allow-duplicate': { type: 'boolean' },
+        manage: { type: 'boolean' },
+        at: { type: 'string' },
+        'expect-channel': { type: 'string' },
+        'paid-placement': { type: 'boolean' },
         'allow-paid': { type: 'boolean' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -206,9 +214,20 @@ async function youtubeCommand([sub, ...args]) {
         if (!opts['client-secret']) throw new Error('Use: youtube setup --client-secret <caminho do client_secret_….json>');
         return print(await youtube.importClientFile(path.resolve(opts['client-secret'])));
     case 'auth':
-        return print(await youtube.authorize({ log: (m) => console.error(m) }));
+        return print(await youtube.authorize({ log: (m) => console.error(m), profile: opts.manage ? 'manage' : 'upload' }));
     case 'status':
         return print(await youtube.status());
+    case 'channel':
+        return print(await youtube.fetchMyChannel());
+    case 'videos': {
+        const ids = args.length ? args : youtube.uploadHistory().slice(-20).map((h) => h.video_id);
+        return print(await youtube.getVideos(ids));
+    }
+    case 'publish':
+        return print(await youtube.setVisibility(args[0], { privacy: opts.privacy || 'public' }));
+    case 'schedule':
+        if (!opts.at) throw new Error('Use: youtube schedule <videoId> --at 2026-12-01T18:00:00-03:00');
+        return print(await youtube.setVisibility(args[0], { publish_at: opts.at }));
     case 'history':
         return print(youtube.uploadHistory());
     case 'logout':
@@ -226,17 +245,19 @@ async function youtubeCommand([sub, ...args]) {
             tags: opts.tags,
             privacy: opts.privacy,
             publish_at: opts['publish-at'],
-            thumbnail: opts.thumbnail,
+            thumbnail: opts['no-thumbnail'] ? null : opts.thumbnail,
             category_id: opts.category,
             language: opts.language,
             contains_synthetic_media: opts.synthetic ? true : undefined,
             allow_duplicate: opts['allow-duplicate'] || undefined,
+            expected_channel: opts['expect-channel'],
+            paid_product_placement: opts['paid-placement'] ? true : undefined,
         }, { onProgress: (x) => p('enviando', x), log: (m) => process.stderr.write(`\n[youtube] ${m}`) });
         process.stderr.write('\n');
         return print(result);
     }
     default:
-        throw new Error('Subcomando do YouTube: setup | auth | status | upload | history | logout');
+        throw new Error('Subcomando do YouTube: setup | auth | channel | status | upload | videos | publish | schedule | history | logout');
     }
 }
 

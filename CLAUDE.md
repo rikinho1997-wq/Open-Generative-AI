@@ -17,6 +17,10 @@ Lets Claude generate images, narration and narrated multi-scene videos (≤ 120 
 - YouTube upload (`claude-agent/src/youtube/`, guide `claude-agent/YOUTUBE.md`): OAuth desktop flow with PKCE, tokens
   in an encrypted vault outside the repo, resumable `videos.insert`. Upload only when the user asks; default `private`;
   `public`/`unlisted`/`publish_at` only on explicit request. Never ask for or echo client secrets, codes or tokens.
+  Windows installer: `claude-agent/windows/Configurar-YouTube.cmd` (picks the OAuth JSON, browser consent, confirms
+  the channel, first private upload) and `YouTube-Menu.cmd` (publish/schedule later). Scripts are UTF-8 with BOM +
+  CRLF; in PowerShell `$channel` and `$Channel` are the same variable. Always send `privacyStatus` and
+  `paidProductPlacementDetails` explicitly (since Nov 2026 a missing privacyStatus means public).
 
 ## Rules
 

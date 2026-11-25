@@ -318,11 +318,14 @@ server.registerTool('oga_youtube_authorize', {
     title: 'YouTube: autorizar pelo navegador',
     description: 'Abre o navegador DESTE computador na tela de consentimento do Google (OAuth com PKCE, escopo youtube.upload) e guarda os tokens no cofre local criptografado. '
         + 'Requer o cliente configurado antes (oga youtube setup --client-secret). O usuário conclui a autorização no navegador; acompanhe com oga_job_status.',
-    inputSchema: { wait_seconds: waitSchema },
+    inputSchema: {
+        manage: z.boolean().default(false).describe('Também permitir publicar/agendar vídeos DEPOIS do envio (escopo youtube.force-ssl). Só se o usuário pedir.'),
+        wait_seconds: waitSchema,
+    },
     annotations: { openWorldHint: true },
-}, async ({ wait_seconds: wait = 5 }) => {
+}, async ({ manage, wait_seconds: wait = 5 }) => {
     try {
-        const job = startJob('youtube-auth', 'Autorização do YouTube', ({ signal, log }) => youtube.authorize({ log, signal }));
+        const job = startJob('youtube-auth', 'Autorização do YouTube', ({ signal, log }) => youtube.authorize({ log, signal, profile: manage ? 'manage' : 'upload' }));
         return { content: [text(await waitForJob(job.id, wait))] };
     } catch (err) {
         return errorResult(err);
@@ -348,6 +351,8 @@ server.registerTool('oga_youtube_upload', {
         thumbnail: z.string().optional().describe('JPG/PNG até 2 MB (canal verificado)'),
         notify_subscribers: z.boolean().optional(),
         allow_duplicate: z.boolean().optional().describe('Enviar mesmo que o arquivo já tenha sido enviado antes'),
+        expected_channel: z.string().optional().describe('Nome ou ID do canal esperado (ex. "AGORA FAZ SENTIDO"); bloqueia o envio se o token apontar para outro'),
+        paid_product_placement: z.boolean().optional().describe('Declara conteúdo pago/patrocinado (padrão: false, declarado explicitamente)'),
         wait_seconds: waitSchema,
     },
     annotations: { openWorldHint: true },
@@ -357,6 +362,39 @@ server.registerTool('oga_youtube_upload', {
         const job = startJob('youtube-upload', `YouTube: ${req.title || path.basename(req.file)}`, ({ signal, progress, log }) =>
             youtube.upload(args, { signal, log, onProgress: (p) => progress('enviando', p) }));
         return { content: [text(await waitForJob(job.id, wait))] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+server.registerTool('oga_youtube_videos', {
+    title: 'YouTube: canal e vídeos enviados',
+    description: 'Mostra o canal autorizado e o status atual (visibilidade, agendamento, processamento) dos vídeos enviados pelo agente.',
+    inputSchema: { video_ids: z.array(z.string()).optional().describe('Padrão: os últimos 20 do histórico') },
+    annotations: { readOnlyHint: true },
+}, async ({ video_ids: ids }) => {
+    try {
+        const list = ids?.length ? ids : youtube.uploadHistory().slice(-20).map((h) => h.video_id);
+        return { content: [text({ channel: await youtube.fetchMyChannel(), videos: await youtube.getVideos(list) })] };
+    } catch (err) {
+        return errorResult(err);
+    }
+});
+
+server.registerTool('oga_youtube_set_visibility', {
+    title: 'YouTube: publicar ou agendar',
+    description: 'Muda a visibilidade de um vídeo já enviado (private/unlisted/public) ou agenda a publicação de um vídeo privado nunca publicado. '
+        + 'Exige autorização com manage. Use SOMENTE quando o usuário pedir explicitamente para publicar/agendar aquele vídeo.',
+    inputSchema: {
+        video_id: z.string(),
+        privacy: z.enum(['private', 'unlisted', 'public']).optional(),
+        publish_at: z.string().optional().describe('ISO 8601 com fuso, ex. 2026-12-01T18:00:00-03:00 (mantém privado até lá)'),
+    },
+    annotations: { openWorldHint: true },
+}, async ({ video_id: id, privacy, publish_at: publishAt }) => {
+    try {
+        if (!privacy && !publishAt) throw new Error('Informe privacy ou publish_at.');
+        return { content: [text(await youtube.setVisibility(id, { privacy, publish_at: publishAt }))] };
     } catch (err) {
         return errorResult(err);
     }

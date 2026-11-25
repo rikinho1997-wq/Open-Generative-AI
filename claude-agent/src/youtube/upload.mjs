@@ -5,7 +5,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { probeMedia } from '../media.mjs';
-import { endpoints, getAccessToken } from './auth.mjs';
+import { assertChannel, endpoints, getAccessToken, grantedScopes, hasScope, requireScope } from './auth.mjs';
 import { readJson, writeJson } from './vault.mjs';
 
 export const PRIVACY = ['private', 'unlisted', 'public'];
@@ -73,7 +73,10 @@ export function buildVideoResource(meta, now = Date.now()) {
         snippet.defaultLanguage = meta.language;
         snippet.defaultAudioLanguage = meta.language;
     }
-    return { resource: { snippet, status }, errors, warnings };
+    // Since 16 Nov 2026 the API no longer assumes "no paid product placement":
+    // declare it explicitly on every upload.
+    const paidProductPlacementDetails = { hasPaidProductPlacement: Boolean(meta.paid_product_placement) };
+    return { resource: { snippet, status, paidProductPlacementDetails }, errors, warnings };
 }
 
 function sha256File(file) {
@@ -96,7 +99,7 @@ async function apiError(res) {
         const j = JSON.parse(text);
         const reason = j.error?.errors?.[0]?.reason;
         msg = `${j.error?.message || msg}${reason ? ` (${reason})` : ''}`;
-        if (reason === 'quotaExceeded') msg += ' — cota diária da API esgotada (um envio custa ~1600 de 10.000 unidades/dia); tente amanhã.';
+        if (reason === 'quotaExceeded') msg += ' — cota diária esgotada (padrão: 100 envios/dia no bucket de uploads e 10.000 unidades/dia para os demais métodos; zera à meia-noite do Pacífico).';
         if (reason === 'uploadLimitExceeded') msg += ' — limite de envios do canal atingido; tente mais tarde.';
     } catch { /* not JSON */ }
     const err = new Error(`YouTube API HTTP ${res.status}: ${msg}`);
@@ -145,6 +148,9 @@ export async function uploadVideo({ file, meta, chunkSize = CHUNK, onProgress = 
     const info = await probeMedia(file).catch(() => null);
     if (info && (!info.hasVideo || !info.hasAudio)) warnings.push('O arquivo não tem trilha de vídeo e de áudio.');
     const sha256 = sha256File(file);
+    if (meta.sha256 && String(meta.sha256).toLowerCase() !== sha256) {
+        warnings.push('O arquivo não é idêntico ao vídeo final indicado nos metadados (SHA-256 diferente).');
+    }
     const history = readJson(HISTORY, []);
     const previous = history.find((h) => h.sha256 === sha256);
     if (previous && !meta.allow_duplicate) {
@@ -152,9 +158,11 @@ export async function uploadVideo({ file, meta, chunkSize = CHUNK, onProgress = 
             + 'Para enviar de novo mesmo assim, use allow_duplicate: true.');
     }
     const api = endpoints().api;
+    // Make sure the token still acts for the right channel (when we can read it).
+    const channel = await assertChannel(meta.expected_channel);
 
     // 1. Start a resumable session.
-    const params = new URLSearchParams({ uploadType: 'resumable', part: 'snippet,status', notifySubscribers: String(Boolean(meta.notify_subscribers)) });
+    const params = new URLSearchParams({ uploadType: 'resumable', part: 'snippet,status,paidProductPlacementDetails', notifySubscribers: String(Boolean(meta.notify_subscribers)) });
     const init = await withRetries((token) => fetch(`${api}/upload/youtube/v3/videos?${params}`, {
         method: 'POST',
         headers: {
@@ -219,12 +227,22 @@ export async function uploadVideo({ file, meta, chunkSize = CHUNK, onProgress = 
     }
 
     // 3. Optional custom thumbnail (needs a verified channel; failure is only a warning).
+    //    Shorts: since 3 Nov 2026 thumbnails are supported, but only after processing.
     let thumbnail = null;
     if (meta.thumbnail) {
         try {
             if (!fs.existsSync(meta.thumbnail)) throw new Error(`arquivo não encontrado: ${meta.thumbnail}`);
             const img = fs.readFileSync(meta.thumbnail);
-            if (img.length > 2 * 1024 * 1024) throw new Error('a thumbnail precisa ter no máximo 2 MB');
+            if (img.length > 50 * 1024 * 1024) throw new Error('a thumbnail precisa ter no máximo 50 MB');
+            const isShort = info && info.height > info.width && info.duration <= 180;
+            if (isShort) {
+                if (hasScope(await grantedScopes(), 'read')) {
+                    log('Short: aguardando o YouTube terminar o processamento para aplicar a thumbnail…');
+                    await waitForProcessing(video.id, { signal, log, timeoutMs: meta.processing_timeout_ms ?? 15 * 60_000 });
+                } else {
+                    warnings.push('Short: sem permissão de leitura para esperar o processamento; a thumbnail pode não ser aplicada.');
+                }
+            }
             const type = /\.png$/i.test(meta.thumbnail) ? 'image/png' : 'image/jpeg';
             const res = await withRetries((token) => fetch(`${api}/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(video.id)}&uploadType=media`, {
                 method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': type }, body: img, signal,
@@ -233,20 +251,21 @@ export async function uploadVideo({ file, meta, chunkSize = CHUNK, onProgress = 
             thumbnail = 'definida';
         } catch (err) {
             thumbnail = `não definida: ${err.message}`;
-            warnings.push(`Thumbnail não aplicada (${err.message}). Canais precisam estar verificados por telefone para thumbnails personalizadas.`);
+            warnings.push(`Thumbnail não aplicada (${err.message}). Thumbnails personalizadas exigem canal verificado (youtube.com/verify).`);
         }
     }
 
     const returnedPrivacy = video.status?.privacyStatus;
     if (returnedPrivacy && returnedPrivacy !== resource.status.privacyStatus) {
-        warnings.push(`Pedido: ${resource.status.privacyStatus}; o YouTube registrou: ${returnedPrivacy}. Projetos de API não auditados `
-            + 'têm os envios restritos ao modo privado até passarem pela auditoria (veja YOUTUBE.md).');
+        warnings.push(`Pedido: ${resource.status.privacyStatus}; o YouTube registrou: ${returnedPrivacy}. Desde 2/11/2026 projetos não `
+            + 'auditados não são mais restritos ao privado, mas configurações da conta do criador podem forçar o privado (Central de Ajuda do YouTube).');
     }
     const result = {
         video_id: video.id,
         url: `https://youtu.be/${video.id}`,
         studio: `https://studio.youtube.com/video/${video.id}/edit`,
         title: resource.snippet.title,
+        channel: channel ? { id: channel.id, title: channel.title } : null,
         privacy: returnedPrivacy || resource.status.privacyStatus,
         publish_at: video.status?.publishAt || resource.status.publishAt || null,
         upload_status: video.status?.uploadStatus || null,
@@ -262,4 +281,101 @@ export async function uploadVideo({ file, meta, chunkSize = CHUNK, onProgress = 
 
 export function uploadHistory() {
     return readJson(HISTORY, []);
+}
+
+
+// ─── After upload: status, publication and scheduling ───────────────────────────
+async function apiGet(pathAndQuery, { signal } = {}) {
+    const res = await fetch(`${endpoints().api}${pathAndQuery}`, { headers: { Authorization: `Bearer ${await getAccessToken()}` }, signal });
+    if (!res.ok) throw await apiError(res);
+    return res.json();
+}
+
+// videos.list — 1 unit. Status, processing and title of up to 50 of your videos.
+export async function getVideos(ids, { signal } = {}) {
+    await requireScope('read', 'Consultar vídeos');
+    const list = [...new Set(ids)].slice(0, 50);
+    if (!list.length) return [];
+    const data = await apiGet(`/youtube/v3/videos?part=snippet,status,processingDetails&id=${list.map(encodeURIComponent).join(',')}`, { signal });
+    return (data.items || []).map((v) => ({
+        video_id: v.id,
+        title: v.snippet?.title,
+        channel_id: v.snippet?.channelId,
+        privacy: v.status?.privacyStatus,
+        publish_at: v.status?.publishAt || null,
+        upload_status: v.status?.uploadStatus,
+        processing: v.processingDetails?.processingStatus || null,
+        url: `https://youtu.be/${v.id}`,
+    }));
+}
+
+export async function waitForProcessing(videoId, { signal, log = () => {}, timeoutMs = 15 * 60_000, intervalMs = 15_000 } = {}) {
+    const until = Date.now() + timeoutMs;
+    for (;;) {
+        const [v] = await getVideos([videoId], { signal });
+        const state = v?.processing;
+        if (state === 'succeeded') return v;
+        if (state === 'failed' || state === 'terminated') throw new Error(`o processamento do vídeo falhou (${state})`);
+        if (Date.now() > until) throw new Error('o processamento ainda não terminou; aplique a thumbnail depois');
+        log(`Processamento: ${state || 'aguardando'}…`);
+        await sleep(intervalMs, signal);
+    }
+}
+
+// Publish now, change visibility, or schedule a private, never-published video.
+// videos.update (50 units) overwrites every status field it receives and clears
+// the ones it does not — so the current status is read first and sent back.
+export async function setVisibility(videoId, { privacy, publish_at: publishAtInput } = {}, { signal, now = Date.now() } = {}) {
+    await requireScope('manage', 'Publicar ou agendar depois do envio');
+    if (!videoId) throw new Error('Informe o ID do vídeo.');
+    const data = await apiGet(`/youtube/v3/videos?part=status,snippet&id=${encodeURIComponent(videoId)}`, { signal });
+    const current = (data.items || [])[0];
+    if (!current) throw new Error(`Vídeo ${videoId} não encontrado neste canal.`);
+    const status = {
+        privacyStatus: current.status.privacyStatus,
+        embeddable: current.status.embeddable,
+        license: current.status.license,
+        publicStatsViewable: current.status.publicStatsViewable,
+    };
+    let publishAt;
+    if (publishAtInput) {
+        const t = Date.parse(publishAtInput);
+        if (Number.isNaN(t)) throw new Error(`Data inválida: ${publishAtInput} (use ISO 8601, ex. 2026-12-01T18:00:00-03:00).`);
+        if (t <= now + 60_000) throw new Error('A data de agendamento precisa estar no futuro.');
+        if (current.status.privacyStatus !== 'private') {
+            throw new Error('Só é possível agendar um vídeo privado que nunca foi publicado (regra da API). Este vídeo já está '
+                + `"${current.status.privacyStatus}".`);
+        }
+        publishAt = new Date(t).toISOString();
+        status.privacyStatus = 'private';
+        status.publishAt = publishAt;
+    } else {
+        if (!PRIVACY.includes(privacy)) throw new Error(`Visibilidade inválida: ${privacy} (use private, unlisted ou public).`);
+        status.privacyStatus = privacy; // omitting publishAt cancels any previous schedule
+    }
+    for (const k of Object.keys(status)) if (status[k] === undefined) delete status[k];
+    const res = await fetch(`${endpoints().api}/youtube/v3/videos?part=status`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${await getAccessToken()}`, 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({ id: videoId, status }),
+        signal,
+    });
+    if (!res.ok) throw await apiError(res);
+    const updated = await res.json();
+    const result = {
+        video_id: videoId,
+        title: current.snippet?.title,
+        before: { privacy: current.status.privacyStatus, publish_at: current.status.publishAt || null },
+        after: { privacy: updated.status?.privacyStatus, publish_at: updated.status?.publishAt || null },
+        url: `https://youtu.be/${videoId}`,
+    };
+    const history = readJson(HISTORY, []);
+    const entry = history.find((h) => h.video_id === videoId);
+    if (entry) {
+        entry.privacy = result.after.privacy;
+        entry.publish_at = result.after.publish_at;
+        entry.updated_at = new Date().toISOString();
+        writeJson(HISTORY, history);
+    }
+    return result;
 }

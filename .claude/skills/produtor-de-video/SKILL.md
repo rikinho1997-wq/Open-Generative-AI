@@ -85,9 +85,13 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 
 ## Publicar no YouTube
 
-- Só quando o usuário pedir o envio. `oga_youtube_status` primeiro; sem autorização, oriente pelo `claude-agent/YOUTUBE.md`.
+- Só quando o usuário pedir o envio. `oga_youtube_status` primeiro; sem autorização, oriente pelo `claude-agent/YOUTUBE.md`
+  (no Windows: dois cliques em `claude-agent\windows\Configurar-YouTube.cmd`).
 - `oga_youtube_upload` com `metadata_file` (ex.: `productions/.../youtube-ep01.json`) ou campos diretos. Padrão **privado**;
   público, não listado ou `publish_at` apenas a pedido explícito. Informe o link `youtu.be` e o do Studio.
+  Para o canal do projeto, passe `expected_channel: "AGORA FAZ SENTIDO"` (o envio é bloqueado se o token for de outro canal).
+- Publicar/agendar depois: `oga_youtube_videos` para ver o status e `oga_youtube_set_visibility` (`privacy` ou `publish_at`),
+  só a pedido explícito. Agendamento só vale para vídeo privado nunca publicado; exige autorização com `manage`.
 - Nunca peça nem mostre client secret, códigos ou tokens no chat.
 
 ## Ferramentas avulsas

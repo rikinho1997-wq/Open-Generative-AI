@@ -1,108 +1,187 @@
-# Envio automático ao YouTube (YouTube Data API v3)
+# Envio ao YouTube (YouTube Data API v3) — guia para Windows
 
-O agente envia vídeos ao canal pela **API oficial e gratuita** do YouTube: OAuth 2.0 de app para computador
-(com PKCE), envio resumível, título/descrição/tags, thumbnail, visibilidade e agendamento.
-Escopo pedido: só `youtube.upload` (o mínimo para enviar vídeos).
+O agente envia vídeos ao canal **AGORA FAZ SENTIDO** pela **API oficial e gratuita** do YouTube:
 
-> **Faça a autorização e os envios no seu computador** (Windows/macOS/Linux), onde está o navegador.
-> Numa sessão do Claude na nuvem, o retorno do Google vai para o `127.0.0.1` do *seu* PC, não do container.
+- OAuth 2.0 de app para computador (PKCE) e confirmação do canal;
+- tokens criptografados fora do projeto;
+- envio retomável, sempre **privado** no primeiro momento;
+- publicação e agendamento depois.
+
+Nenhum serviço pago é usado, e nenhuma credencial ou token vai para o GitHub.
+
+> Faça a configuração **no seu computador**, onde está o navegador. Numa sessão do Claude na nuvem, o retorno do
+> Google iria para o `127.0.0.1` do seu PC, não para o servidor.
 
 ---
 
-## 1. Ajustes no Google Cloud (5 minutos)
+## O que mudou na API em 2026 (documentação oficial, consultada em 25/11/2026)
 
-Você já criou o projeto, ativou a API e criou o cliente **App para computador**. Confira também:
+| Data | Mudança | O que o agente faz |
+|---|---|---|
+| **16/11/2026** | `paidProductPlacementDetails.hasPaidProductPlacement` **deixou de ter padrão `false`**. Sem o campo, o vídeo fica sem declaração. | Sempre envia o campo: `false`, ou `true` com `--paid-placement`. |
+| **03/11/2026** | `thumbnails.set` passou a aceitar thumbnails de **Shorts**, só **depois do processamento**. | Em Shorts, espera o processamento e só então aplica a thumbnail. |
+| **02/11/2026** | Projetos **não verificados não ficam mais presos ao modo privado**: a restrição de 2020, que exigia auditoria, acabou. **Sem `privacyStatus`, o envio agora fica público.** Algumas contas ainda forçam privado. | Sempre envia `privacyStatus` explícito, **privado por padrão**. Não é preciso auditoria para publicar. |
+| 15/10/2026 | `madeForKids` só muda quando é enviado. | Sempre envia `selfDeclaredMadeForKids` (padrão `false`). |
+| 14/09/2026 | Thumbnail: limite de **2 MB → 50 MB**. | Aceita até 50 MB. |
+| **01/06/2026** | **Cota granular**: `videos.insert` e `search.list` ganharam cotas próprias. | Veja a tabela abaixo. |
+| 04/12/2025 | Custo de um envio caiu de ~1.600 para ~100 unidades. | Superado pela cota granular. |
 
-1. **Tela de consentimento OAuth** (Google Auth Platform → Público-alvo):
-   - Tipo de usuário **Externo**, com o seu e-mail (dono/gerente do canal) em **Usuários de teste**.
-   - **Importante:** enquanto o app estiver em **"Teste"**, o Google faz a autorização **expirar a cada 7 dias**.
-     Para automação contínua, clique em **Publicar app** ("Em produção"). Não precisa de verificação para uso próprio:
-     na autorização aparecerá *"O Google não verificou este app"* → **Avançado** → **Acessar (não seguro)**.
-     Isso é esperado para um app seu (limite de 100 usuários).
-2. **Escopo** `.../auth/youtube.upload` adicionado em Acesso a dados (você já fez).
+### Cota gratuita por projeto (padrão)
 
-## 2. Guardar o JSON de credenciais com segurança
+A cota zera à **meia-noite do horário do Pacífico**: 5h de Brasília, ou 4h de março a novembro, no horário de verão dos EUA.
 
-1. Google Cloud → **APIs e serviços → Credenciais** → seu cliente *App para computador* → **Baixar JSON**
-   (arquivo `client_secret_….apps.googleusercontent.com.json`).
-2. **Não** coloque esse arquivo na pasta do projeto. Importe-o para o cofre local:
+| O quê | Limite diário | Custo |
+|---|---|---|
+| Envios (`videos.insert`) | **100 envios/dia**, cota própria | 1 por envio |
+| Buscas (`search.list`) | 100/dia, cota própria | 1 (o agente não usa) |
+| Todo o resto | **10.000 unidades/dia** | thumbnail 50 · publicar/agendar (`videos.update`) 50 · listar vídeos/canal 1 |
 
-   ```powershell
-   node claude-agent\bin\oga.mjs youtube setup --client-secret "$env:USERPROFILE\Downloads\client_secret_XXXX.json"
-   ```
+O uso aparece em Google Cloud → APIs e serviços → Cotas. Para pedir mais cota, use o
+[Quota Extension Form](https://support.google.com/youtube/contact/yt_api_form). Não é necessário para um canal.
 
-   O agente copia o conteúdo para o **cofre fora do Git** e protege assim:
+Fontes oficiais:
 
-   | Sistema | Onde fica | Proteção |
-   |---|---|---|
-   | Windows | `%APPDATA%\open-generative-ai\youtube\` | criptografado com **DPAPI** (só a sua conta do Windows abre) |
-   | macOS / Linux | `~/Library/Application Support/…/youtube` · `~/.config/open-generative-ai/youtube` | pasta 0700 e arquivos 0600 |
-   | Qualquer um, opcional | idem | **AES-256-GCM** com senha, se `OGA_YT_PASSPHRASE` estiver definida |
+- [Revision history](https://developers.google.com/youtube/v3/revision_history)
+- [Quota calculator](https://developers.google.com/youtube/v3/determine_quota_cost)
+- [videos.insert](https://developers.google.com/youtube/v3/docs/videos/insert)
+- [videos.update](https://developers.google.com/youtube/v3/docs/videos/update)
+- [thumbnails.set](https://developers.google.com/youtube/v3/docs/thumbnails/set)
 
-3. **Apague o JSON baixado** (ou guarde-o num gerenciador de senhas). O cofre já tem a cópia.
-4. Proteções extras: o `.gitignore` bloqueia `client_secret*.json` e `token.json`, e o agente se recusa a gravar
-   credenciais dentro do repositório. **Nunca** cole o client secret, códigos ou tokens no chat.
+---
 
-## 3. Autorização inicial pelo navegador (uma vez)
+## Passo a passo no Windows (cerca de 10 minutos)
+
+### Passo 1 — Conferir o Google Cloud
+
+Você já criou o projeto, ativou a YouTube Data API v3 e criou o cliente **App para computador**. Em
+[Google Auth Platform](https://console.cloud.google.com/auth/overview), confira:
+
+1. **Público-alvo**:
+   - tipo **Externo**;
+   - seu e-mail (dono ou gerente do canal) em **Usuários de teste**.
+
+   Enquanto o app estiver em **"Teste"**, o Google faz a autorização **expirar a cada 7 dias**. Para automação contínua,
+   clique em **Publicar app** ("Em produção"). Para uso próprio não é preciso verificação: aparecerá *"O Google não
+   verificou este app"* → **Avançado** → **Acessar**.
+2. **Acesso a dados** → **Adicionar ou remover escopos**. Marque:
+   - `.../auth/youtube.upload`: enviar vídeos (você já tem);
+   - `.../auth/youtube.readonly`: confirmar qual canal foi autorizado;
+   - `.../auth/youtube.force-ssl`: publicar e agendar depois do envio (opcional).
+3. **Clientes** → seu cliente *App para computador* → **Baixar JSON** (`client_secret_….json`, vai para Downloads).
+
+### Passo 2 — Baixar o projeto e o vídeo
+
+1. Na pasta do projeto, atualize o código com `git pull`, ou baixe de novo pelo GitHub.
+2. Deixe o MP4 do episódio 1 que você baixou desta conversa na pasta **Downloads**, com o nome original
+   `AGORA-FAZ-SENTIDO-ep01-congestionamento-fantasma-1080p.mp4`. Se quiser a thumbnail, deixe também
+   `thumbnail-1280x720.jpg`. O assistente encontra os dois sozinho e confere o SHA-256.
+3. Precisa do **Node.js 18+**. Se faltar, o assistente oferece instalar pelo `winget`, de graça.
+
+### Passo 3 — Rodar o assistente
+
+Abra a pasta `claude-agent\windows` do projeto e dê **dois cliques em `Configurar-YouTube.cmd`**. Ou rode no PowerShell,
+dentro da pasta do projeto:
 
 ```powershell
-node claude-agent\bin\oga.mjs youtube auth
+powershell -NoProfile -STA -ExecutionPolicy Bypass -File claude-agent\windows\youtube-setup.ps1
 ```
 
-1. O navegador abre na tela do Google (se não abrir, copie o link exibido no terminal).
-2. Escolha a conta e o **canal AGORA FAZ SENTIDO** (se for uma Conta de Marca, selecione-a na lista).
-3. Permita **"Gerenciar seus vídeos do YouTube"** → aparece a página *Autorização concluída*.
-4. O *refresh token* fica criptografado no cofre; o *access token* (1 h) é renovado sozinho a cada envio.
+O assistente faz tudo em sequência:
 
-Pelo Claude (com o Claude Code rodando no seu PC): *"autorize o YouTube"* → ferramenta `oga_youtube_authorize`.
+| Etapa | O que acontece |
+|---|---|
+| **1. JSON OAuth** | Abre uma janela do Windows para você **selecionar o `client_secret_….json`**. Ele é copiado para o cofre criptografado e o assistente oferece **apagar o original**. |
+| **2. Navegador** | Abre a tela do Google. Escolha a conta e, na lista de canais ou Contas de Marca, o **AGORA FAZ SENTIDO**. Marque todas as permissões. |
+| **3. Canal** | Lê o canal autorizado (`channels.list`). Se não for o AGORA FAZ SENTIDO, **revoga e pede de novo**, e nada é enviado. O canal fica vinculado: envios futuros são bloqueados se o token mudar de canal. |
+| **4. Tokens** | Mostra onde e como ficaram guardados (DPAPI) e confere se não há credencial exposta ao Git dentro do projeto. |
+| **5. Envio de teste** | Encontra o MP4 e a thumbnail, confere o SHA-256 e envia o episódio 1 como **PRIVADO**. Depois abre o YouTube Studio para você revisar. |
+| **6. Depois** | Cria o atalho **"YouTube - Agora Faz Sentido"** na Área de Trabalho, que abre o menu de publicar e agendar. |
 
-Conferir: `node claude-agent\bin\oga.mjs youtube status` (nunca mostra segredos).
+Se algo falhar, rode de novo: o assistente pula o que já está pronto. Opções úteis:
 
-## 4. Primeiro envio — privado, para revisão
+- `-ClientSecret caminho.json`: pula a janela de seleção do arquivo;
+- `-Video arquivo.mp4`: escolhe outro vídeo para o envio de teste;
+- `-SkipUpload`: configura tudo sem enviar;
+- `-NoManage`: autoriza só envio, sem publicar ou agendar.
 
-Os metadados do episódio 1 já estão prontos em
-`productions/agora-faz-sentido/ep01-congestionamento-fantasma/youtube-ep01.json` (privado, pt-BR, Ciência e
-tecnologia, thumbnail, sem notificar inscritos).
+### Passo 4 — Revisar, publicar e agendar
+
+Dê dois cliques no atalho **"YouTube - Agora Faz Sentido"** ou em `claude-agent\windows\YouTube-Menu.cmd`:
+
+```
+1  Enviar um vídeo (sempre PRIVADO)        5  Voltar para privado / cancelar agendamento
+2  Ver meus vídeos enviados                6  Abrir o YouTube Studio
+3  Publicar agora (público ou não listado)  7  Autorizar de novo (trocar canal / ativar publicar)
+4  Agendar a publicação                    8  Desconectar este computador
+```
+
+- **Publicar** pede confirmação explícita antes de deixar o vídeo público.
+- **Agendar**: digite a data e a hora no horário do seu PC, por exemplo `05/12/2026 18:00`. Até lá o vídeo fica
+  privado. Pela regra da API, só dá para agendar um vídeo **privado que nunca foi publicado**.
+- Publicar ou agendar preservam as outras configurações de status do vídeo. O agente relê o status atual antes de
+  enviar, porque o `videos.update` apaga os campos omitidos.
+
+Pelo Claude Code no seu PC também funciona, por exemplo: *"publique o episódio 1"* ou *"agende o episódio 1 para
+sexta às 18h"*. As ferramentas usadas são `oga_youtube_set_visibility` e `oga_youtube_videos`.
+
+---
+
+## Linha de comando (equivalente ao assistente)
 
 ```powershell
-node claude-agent\bin\oga.mjs youtube upload --meta productions\agora-faz-sentido\ep01-congestionamento-fantasma\youtube-ep01.json
+node claude-agent\bin\oga.mjs youtube setup --client-secret "$env:USERPROFILE\Downloads\client_secret_XXXX.json"
+node claude-agent\bin\oga.mjs youtube auth --manage          # --manage = permitir publicar/agendar depois
+node claude-agent\bin\oga.mjs youtube channel                # canal autorizado
+node claude-agent\bin\oga.mjs youtube upload "$env:USERPROFILE\Downloads\AGORA-FAZ-SENTIDO-ep01-congestionamento-fantasma-1080p.mp4" `
+    --meta productions\agora-faz-sentido\ep01-congestionamento-fantasma\youtube-ep01.json `
+    --thumbnail "$env:USERPROFILE\Downloads\thumbnail-1280x720.jpg" --privacy private --expect-channel "AGORA FAZ SENTIDO"
+node claude-agent\bin\oga.mjs youtube videos                 # status, visibilidade e agendamento
+node claude-agent\bin\oga.mjs youtube publish VIDEO_ID --privacy public
+node claude-agent\bin\oga.mjs youtube schedule VIDEO_ID --at 2026-12-05T18:00:00-03:00
+node claude-agent\bin\oga.mjs youtube status | history | logout
 ```
 
-Resultado: link `https://youtu.be/…` e o link do YouTube Studio para revisar. Pelo Claude:
-*"envie o episódio 1 ao YouTube como privado"* → `oga_youtube_upload` com `metadata_file`.
+Outras opções de `upload`:
 
-Outras opções: `--title`, `--description-file`, `--tags "a,b"`, `--category 28`, `--language pt-BR`,
-`--thumbnail thumb.jpg`, `--synthetic` (declara conteúdo realista gerado por IA), `--allow-duplicate`.
-O agente bloqueia o reenvio do mesmo arquivo por engano (histórico em `youtube history`).
+- `--title`, `--description-file`, `--tags "a,b"`, `--category 28`, `--language pt-BR`;
+- `--no-thumbnail`;
+- `--synthetic`: declara conteúdo realista alterado ou gerado por IA. Avalie em cada vídeo, conforme as regras do
+  YouTube;
+- `--paid-placement`: declara merchandising pago;
+- `--allow-duplicate`: o agente bloqueia reenvio do mesmo arquivo por engano.
 
-## 5. Visibilidade e agendamento — e o limite da API
+---
 
-- `--privacy private | unlisted | public` (padrão: **private**).
-- `--publish-at 2026-12-01T18:00:00-03:00` agenda a publicação; pela regra da API o vídeo fica **privado até a hora marcada**.
-- **Limite oficial:** segundo a documentação da API, vídeos enviados por **projetos não auditados** criados após
-  28/07/2020 ficam **restritos ao modo privado**. Para liberar público, não listado e agendamento pela API, peça a
-  auditoria gratuita do projeto no formulário *"YouTube API Services – Audit and Quota Extension Form"* (Google).
-  Até lá, use envios privados e revise no Studio. Se o resultado mostrar visibilidade diferente da pedida, o agente avisa.
+## Segurança
 
-## 6. Cotas e outros limites (gratuitos)
+| Item | Onde fica | Proteção |
+|---|---|---|
+| Cliente OAuth e tokens | `%APPDATA%\open-generative-ai\youtube\` | **DPAPI**: só a sua conta do Windows, neste PC, consegue abrir |
+| Alternativa | idem | **AES-256-GCM** com senha, se a variável `OGA_YT_PASSPHRASE` estiver definida |
 
-- Cota padrão: **10.000 unidades/dia**. Cada envio custa cerca de **1.600** (≈ 6 vídeos por dia); thumbnail, cerca de 50.
-- Thumbnail personalizada exige canal verificado por telefone (youtube.com/verify). Se falhar, o vídeo sobe mesmo assim.
-- Legendas `.srt`: a API de legendas exige um escopo mais amplo (`youtube.force-ssl`). Os vídeos já têm legenda gravada;
-  para enviar a faixa `.srt` separada, use o YouTube Studio.
+- O agente **recusa** gravar credenciais dentro do projeto, e o `.gitignore` bloqueia `client_secret*.json`,
+  `token.json` e `*.oauth.json`.
+- O assistente confere com o Git se algum arquivo de credencial está exposto no projeto.
+- Permissões pedidas: o **mínimo** para cada perfil:
+  - só envio: `youtube.upload` + `youtube.readonly`;
+  - com publicar/agendar: `youtube.upload` + `youtube.force-ssl`, usado apenas quando você pede.
+- **Nunca** cole o client secret, códigos ou tokens no chat.
+- **Revogar**: opção 8 do menu, `youtube logout` ou https://myaccount.google.com/permissions.
+- **Se o client secret vazar**:
+  1. Google Cloud → Clientes → **Redefinir chave secreta**;
+  2. baixe o novo JSON;
+  3. rode o assistente de novo. Ele troca o cliente e revoga a autorização antiga.
 
-## 7. Revogar e emergências
-
-- Revogar acesso: `node claude-agent\bin\oga.mjs youtube logout` (ou https://myaccount.google.com/permissions).
-- Se o client secret vazar: Google Cloud → Credenciais → seu cliente → **Redefinir chave secreta**, rode
-  `youtube logout`, baixe o novo JSON e repita `youtube setup` + `youtube auth`.
-
-## 8. Problemas comuns
+## Problemas comuns
 
 | Mensagem | Causa e solução |
 |---|---|
-| `invalid_grant` / "autorização expirou" | Token revogado ou app em "Teste" (7 dias). Publique o app (seção 1) e rode `youtube auth`. |
+| `invalid_grant` / "autorização expirou" | App em "Teste" (7 dias) ou acesso revogado. Publique o app (passo 1) e rode o assistente. |
 | `access_denied` / "acesso bloqueado" | Sua conta não está em Usuários de teste, ou você recusou a permissão. |
-| `redirect_uri_mismatch` / "tipo Aplicativo da Web" | O cliente não é *App para computador*. Crie um desse tipo. |
-| `quotaExceeded` | Cota diária esgotada; tente no dia seguinte. |
-| `youtubeSignupRequired` | A conta escolhida não tem canal; selecione a conta/canal certo na autorização. |
+| "Você autorizou o canal X, não AGORA FAZ SENTIDO" | Na tela do Google, escolha a Conta de Marca do canal. Se ela não aparecer, use "Usar outra conta" e confira se você é dono ou gerente. |
+| "exige uma permissão que esta autorização não tem" | Autorize com publicar/agendar: menu → 7, ou `youtube auth --manage`. |
+| `redirect_uri_mismatch` / "Aplicativo da Web" | O cliente não é *App para computador*. Crie um desse tipo. |
+| `quotaExceeded` / `uploadLimitExceeded` | Cota do dia esgotada (100 envios ou 10.000 unidades). Espere a virada, às 5h de Brasília (4h de março a novembro). |
+| Thumbnail "não definida" | Canal sem verificação por telefone (youtube.com/verify) ou Short ainda em processamento. O vídeo sobe mesmo assim. |
+| A janela de seleção não abre | O assistente pede o caminho do arquivo. Cole o caminho, por exemplo com "Copiar como caminho" no Explorer. |
+| "a execução de scripts foi desabilitada" | Use os arquivos `.cmd`: eles rodam o PowerShell com `-ExecutionPolicy Bypass` só para esse script. |

@@ -1,5 +1,6 @@
 {
   "file": "outputs/agora-faz-sentido/ep01/entrega/AGORA-FAZ-SENTIDO-ep01-shorts-9x16.mp4",
+  "sha256": "ba490f5481754b0c6e388b2969bdb21fc03ec0ba1c35add2e35657da35752f74",
   "title": "Por que o trânsito para SEM acidente? 🚗 #shorts",
   "description": "Uma freada pequena + o tempo de reação de quem vem atrás = uma onda que anda para trás. É o congestionamento fantasma, demonstrado em 2008 com 22 carros numa pista circular (Sugiyama et al., New Journal of Physics). Vídeo completo no canal. #shorts #ciencia #transito #curiosidades",
   "tags": [
@@ -17,5 +18,7 @@
   "language": "pt-BR",
   "privacy": "private",
   "made_for_kids": false,
-  "notify_subscribers": false
+  "notify_subscribers": false,
+  "expected_channel": "AGORA FAZ SENTIDO",
+  "paid_product_placement": false
 }

@@ -94,8 +94,16 @@ claude mcp add open-generative-ai -- node /caminho/Open-Generative-AI/claude-age
 ### Publicar no YouTube
 
 Envio automático pela YouTube Data API v3 (gratuita), com OAuth e cofre local criptografado, privado por padrão:
-`oga youtube setup | auth | upload | status | logout` e as ferramentas MCP `oga_youtube_*`.
-Passo a passo de configuração segura: [YOUTUBE.md](YOUTUBE.md).
+`oga youtube setup | auth | channel | upload | videos | publish | schedule | status | logout` e as ferramentas MCP
+`oga_youtube_*`. No Windows, dê dois cliques em `claude-agent\windows\Configurar-YouTube.cmd`. O assistente:
+
+- seleciona o JSON OAuth;
+- autoriza no navegador e confirma o canal;
+- guarda os tokens com DPAPI;
+- faz o primeiro envio privado.
+
+Depois, publique e agende pelo atalho **YouTube - Agora Faz Sentido**. Passo a passo e mudanças de nov/2026 na API:
+[YOUTUBE.md](YOUTUBE.md).
 
 ## 4. Usando sem o Claude (linha de comando)
 

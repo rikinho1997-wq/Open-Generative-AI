@@ -1,0 +1,3 @@
+# Windows helper scripts: keep the exact bytes (UTF-8 BOM + CRLF) that Windows PowerShell 5.1 expects.
+claude-agent/windows/*.ps1 -text
+claude-agent/windows/*.cmd -text

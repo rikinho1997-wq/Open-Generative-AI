@@ -2,10 +2,10 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { authorize, forgetClient, importClientFile, revoke, status } from './auth.mjs';
-import { uploadHistory, uploadVideo } from './upload.mjs';
+import { authorize, boundChannel, fetchMyChannel, forgetClient, importClientFile, revoke, status } from './auth.mjs';
+import { getVideos, setVisibility, uploadHistory, uploadVideo } from './upload.mjs';
 
-export { authorize, forgetClient, importClientFile, revoke, status, uploadHistory };
+export { authorize, boundChannel, fetchMyChannel, forgetClient, getVideos, importClientFile, revoke, setVisibility, status, uploadHistory };
 
 // Merges a metadata JSON file (e.g. productions/.../youtube-ep01.json) with explicit
 // fields; explicit fields win. Relative paths are resolved from the current folder.

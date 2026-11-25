@@ -1,7 +1,12 @@
 // OAuth 2.0 for installed (desktop) apps, as Google recommends:
 // loopback redirect to http://127.0.0.1:<random port>, PKCE (S256) and a `state`
-// check. Only the youtube.upload scope is requested (least privilege).
-// https://developers.google.com/identity/protocols/oauth2/native-app
+// check. https://developers.google.com/identity/protocols/oauth2/native-app
+//
+// Two permission profiles (least privilege first):
+//   upload (default) youtube.upload + youtube.readonly — send videos, confirm the channel,
+//                    read processing/status of your videos
+//   manage           youtube.upload + youtube.force-ssl — also publish or schedule videos
+//                    AFTER upload (videos.update needs it; youtube.upload cannot do it)
 
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -11,6 +16,15 @@ import { IS_WINDOWS } from '../config.mjs';
 import { assertOutsideRepo, deleteSecret, protectionMode, readSecret, secretInfo, writeSecret, youtubeDir } from './vault.mjs';
 
 export const SCOPE = 'https://www.googleapis.com/auth/youtube.upload';
+export const SCOPES = {
+    upload: SCOPE,
+    readonly: 'https://www.googleapis.com/auth/youtube.readonly',
+    manage: 'https://www.googleapis.com/auth/youtube.force-ssl',
+};
+export const PROFILES = {
+    upload: [SCOPES.upload, SCOPES.readonly],
+    manage: [SCOPES.upload, SCOPES.manage],
+};
 const CLIENT_FILE = 'client.json';
 const TOKEN_FILE = 'token.json';
 
@@ -113,7 +127,9 @@ const PAGE = (ok, msg) => `<!doctype html><meta charset="utf-8"><title>Open Gene
 <p>${msg}</p></div></body>`;
 
 // Full browser consent. Resolves with a status object once tokens are stored.
-export async function authorize({ open = openInBrowser, log = () => {}, timeoutMs = 300_000, signal } = {}) {
+export async function authorize({ open = openInBrowser, log = () => {}, timeoutMs = 300_000, signal, profile = 'upload' } = {}) {
+    const scopes = PROFILES[profile];
+    if (!scopes) throw new Error(`Perfil de permissão inválido: ${profile} (use upload ou manage).`);
     const client = await loadClient();
     const verifier = b64url(crypto.randomBytes(48));
     const challenge = b64url(crypto.createHash('sha256').update(verifier).digest());
@@ -130,9 +146,9 @@ export async function authorize({ open = openInBrowser, log = () => {}, timeoutM
         client_id: client.client_id,
         redirect_uri: redirectUri,
         response_type: 'code',
-        scope: SCOPE,
+        scope: scopes.join(' '),
         access_type: 'offline',
-        prompt: 'consent',
+        prompt: 'select_account consent', // always show the account/channel picker
         code_challenge: challenge,
         code_challenge_method: 'S256',
         state,
@@ -180,19 +196,32 @@ export async function authorize({ open = openInBrowser, log = () => {}, timeoutM
     if (!tokens.refresh_token) {
         throw new Error('O Google não devolveu um refresh token. Revogue o acesso em https://myaccount.google.com/permissions e autorize de novo.');
     }
-    if (!String(tokens.scope || '').split(' ').includes(SCOPE)) {
+    const granted = String(tokens.scope || '').split(' ');
+    if (!granted.includes(SCOPE)) {
         throw new Error(`Permissão youtube.upload não concedida (escopos recebidos: ${tokens.scope}). Marque a permissão de envio na tela do Google.`);
     }
+    const missing = scopes.filter((sc) => !granted.includes(sc));
     cached = null;
     await writeSecret(TOKEN_FILE, {
         refresh_token: tokens.refresh_token,
         access_token: tokens.access_token,
         expiry_date: Date.now() + (tokens.expires_in || 3600) * 1000,
         scope: tokens.scope,
+        profile,
         client_id: client.client_id,
         obtained_at: new Date().toISOString(),
     });
-    return status();
+    // Which channel did the user pick on Google's screen? (needs readonly or force-ssl)
+    let channel = null;
+    if (hasScope(granted, 'read')) {
+        try {
+            channel = await fetchMyChannel();
+            await bindChannel(channel);
+        } catch (err) {
+            log(`Não consegui ler o canal autorizado: ${err.message}`);
+        }
+    }
+    return { ...(await status()), channel, missing_permissions: missing.length ? missing : undefined };
 }
 
 // Valid access token, refreshed when it expires in less than a minute. Kept in
@@ -263,7 +292,7 @@ export async function status() {
         client_configured: Boolean(client) || Boolean(process.env.OGA_YT_CLIENT_SECRET),
         authorized: false,
         protection: token?.protection || client?.protection || protectionMode(),
-        scope: SCOPE,
+        scope_profiles: { upload: PROFILES.upload.map((x) => x.split('/').pop()), manage: PROFILES.manage.map((x) => x.split('/').pop()) },
     };
     if (client) {
         try { out.client_id = mask((await readSecret(CLIENT_FILE)).client_id); } catch (err) { out.client_error = err.message; }
@@ -272,6 +301,10 @@ export async function status() {
         try {
             const t = await readSecret(TOKEN_FILE);
             out.authorized = Boolean(t.refresh_token);
+            out.profile = t.profile || 'upload';
+            out.granted_scopes = String(t.scope || '').split(' ').filter(Boolean).map((x) => x.replace('https://www.googleapis.com/auth/', ''));
+            out.can_publish_later = hasScope(t.scope, 'manage');
+            out.channel = t.channel_id ? { id: t.channel_id, title: t.channel_title, custom_url: t.channel_url || null } : null;
             out.access_token_valid_for_s = Math.max(0, Math.round((t.expiry_date - Date.now()) / 1000));
             out.authorized_at = t.obtained_at;
             out.last_refresh = t.refreshed_at || null;
@@ -280,4 +313,65 @@ export async function status() {
         }
     }
     return out;
+}
+
+
+// ─── Scopes and the authorised channel ─────────────────────────────────────────
+export function hasScope(granted, need) {
+    const list = Array.isArray(granted) ? granted : String(granted || '').split(' ');
+    if (need === 'read') return list.includes(SCOPES.readonly) || list.includes(SCOPES.manage) || list.includes('https://www.googleapis.com/auth/youtube');
+    if (need === 'manage') return list.includes(SCOPES.manage) || list.includes('https://www.googleapis.com/auth/youtube');
+    return list.includes(SCOPES.upload) || hasScope(list, 'manage');
+}
+
+export async function grantedScopes() {
+    const tok = await readSecret(TOKEN_FILE);
+    return String(tok?.scope || '').split(' ').filter(Boolean);
+}
+
+export async function requireScope(need, action) {
+    if (hasScope(await grantedScopes(), need)) return;
+    const how = need === 'manage'
+        ? 'autorize com o perfil de gerenciamento: node claude-agent/bin/oga.mjs youtube auth --manage'
+        : 'autorize de novo: node claude-agent/bin/oga.mjs youtube auth';
+    throw new AuthRequiredError(`${action} exige uma permissão que esta autorização não tem; ${how}`);
+}
+
+// channels.list?mine=true — 1 quota unit. Returns the channel the token acts for.
+export async function fetchMyChannel() {
+    await requireScope('read', 'Ler o canal');
+    const res = await fetch(`${endpoints().api}/youtube/v3/channels?part=snippet&mine=true`, {
+        headers: { Authorization: `Bearer ${await getAccessToken()}` },
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(`YouTube API HTTP ${res.status}: ${body.error?.message || 'erro ao ler o canal'}`);
+    const item = (body.items || [])[0];
+    if (!item) throw new Error('A conta autorizada não tem canal no YouTube. Autorize de novo escolhendo o canal correto.');
+    return { id: item.id, title: item.snippet?.title || '', custom_url: item.snippet?.customUrl || null };
+}
+
+export async function bindChannel(channel) {
+    const tok = await readSecret(TOKEN_FILE);
+    await writeSecret(TOKEN_FILE, { ...tok, channel_id: channel.id, channel_title: channel.title, channel_url: channel.custom_url, channel_bound_at: new Date().toISOString() });
+}
+
+export async function boundChannel() {
+    const tok = await readSecret(TOKEN_FILE);
+    return tok?.channel_id ? { id: tok.channel_id, title: tok.channel_title, custom_url: tok.channel_url || null } : null;
+}
+
+const norm = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// Refuses to continue unless the token still acts for the expected channel.
+export async function assertChannel(expected) {
+    if (!hasScope(await grantedScopes(), 'read')) return null; // cannot check with upload-only tokens
+    const live = await fetchMyChannel();
+    const bound = await boundChannel();
+    if (bound && bound.id !== live.id) {
+        throw new Error(`O token agora aponta para o canal "${live.title}" (${live.id}), mas o canal vinculado é "${bound.title}" (${bound.id}). Envio bloqueado.`);
+    }
+    if (expected && live.id !== expected && norm(live.title) !== norm(expected) && norm(live.custom_url) !== norm(expected)) {
+        throw new Error(`Canal autorizado: "${live.title}" (${live.id}); esperado: "${expected}". Envio bloqueado — autorize de novo escolhendo o canal certo.`);
+    }
+    return live;
 }
