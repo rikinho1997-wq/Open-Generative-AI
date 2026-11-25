@@ -24,7 +24,10 @@ Se as ferramentas MCP não estiverem disponíveis, use a CLI equivalente via Bas
 3. `oga_produce_video` com `dry_run: true` → confira `ok` e `estimated_total_seconds`.
 4. `oga_produce_video` de verdade. Ele devolve `job_id` se demorar; acompanhe chamando `oga_job_status` (`wait_seconds: 50`) repetidamente até `status: "done"`.
    Em CPU cada imagem leva ~1 min (modo rápido); avise o usuário do tempo estimado (≈ 1 min × nº de cenas com imagem).
-5. Entregue: caminho do `.mp4`, do `.srt`, duração e custo. Olhe a miniatura retornada para conferir o resultado.
+5. Confira o resultado (miniatura, quadros, áudio) e **envie o MP4 final como anexo para download** na conversa
+   (SendUserFile, `display: "attach"`), com resolução, duração, codecs e o `sha256` do resultado na legenda.
+   Isso é obrigatório em toda entrega de vídeo — nunca entregue só o caminho interno. Inclua também o `.srt`.
+   Sem anexos disponíveis: publique um Artifact privado com o MP4 como asset (≤ 15 MB) e entregue o link.
 6. Para alterar: edite o roteiro e rode de novo com o **mesmo `output_name`** — só o que mudou é regerado.
 
 ## Formato do roteiro

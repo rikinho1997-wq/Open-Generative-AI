@@ -67,6 +67,9 @@ test('renders a narrated, subtitled multi-scene video with transitions and music
         assert.match(srt, /00:00:00,350 -->/);
         assert.ok(fs.existsSync(result.thumbnail));
         assert.match(result.cost, /R\$ 0/);
+        const crypto = await import('node:crypto');
+        assert.equal(result.sha256, crypto.createHash('sha256').update(fs.readFileSync(result.video)).digest('hex'));
+        assert.equal(result.size_bytes, fs.statSync(result.video).size);
         assert.ok(fs.existsSync(path.join(result.project_dir, 'manifest.json')));
 
         // Relative paths work although ffmpeg runs inside the project folder.

@@ -34,7 +34,8 @@ Regras:
 3. Vídeos finais têm no máximo ${MAX_VIDEO_SECONDS} s. Use oga_produce_video com dry_run:true para conferir a duração antes de gerar.
 4. Escreva prompts visuais em inglês, sem pedir texto escrito na imagem; títulos vão no campo "title" da cena.
 5. Tarefas longas retornam job_id: acompanhe com oga_job_status (wait_seconds até ${MAX_WAIT}).
-6. Comece com oga_doctor para saber o que está instalado.`;
+6. Comece com oga_doctor para saber o que está instalado.
+7. Ao terminar um vídeo, entregue SEMPRE o MP4 ao usuário como anexo para download (não apenas o caminho), com o sha256 do resultado.`;
 
 const server = new McpServer(
     { name: 'open-generative-ai', version: '1.0.0' },

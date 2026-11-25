@@ -17,6 +17,12 @@ Lets Claude generate images, narration and narrated multi-scene videos (≤ 120 
 
 ## Rules
 
+- **Every finished video is delivered as a downloadable MP4.** As soon as a render is final (after QA), send the
+  MP4 to the user as an attachment in the conversation (SendUserFile, `display: "attach"`), with resolution,
+  duration, codecs and the SHA-256 from `manifest.json` (`sha256`) in the caption. Never hand over only an
+  internal path. If attachments are unavailable, use a safe fallback, in this order: (1) publish a private
+  Artifact page holding the MP4 as an uploaded asset (≤ 15 MB) and give its link; (2) on the user's own machine,
+  give the full local path of `outputs/…` (the file is already theirs). Never upload media to public hosts.
 - Free/local engines first. Never call MuAPI (paid) or pass `allow_paid: true` without the user's explicit consent
   for that generation. Paid calls also require `MUAPI_API_KEY` and `OGA_ALLOW_PAID=1` in the environment.
 - Never commit API keys or secrets; keys come from environment variables only.

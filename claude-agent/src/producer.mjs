@@ -351,6 +351,8 @@ export async function produceVideo(input, { allowPaid = false, planOnly = false,
     const thumbnail = await extractThumbnail({ video: finalVideo, out: path.join(projectDir, 'thumbnail.jpg'), at: Math.min(1.5, plan.total / 2) });
     const info = await probeMedia(finalVideo);
     fs.rmSync(silentVideo, { force: true });
+    // Checksum so the user can confirm the downloaded file is intact.
+    const sha256 = crypto.createHash('sha256').update(fs.readFileSync(finalVideo)).digest('hex');
 
     const result = {
         video: finalVideo,
@@ -360,6 +362,9 @@ export async function produceVideo(input, { allowPaid = false, planOnly = false,
         duration_seconds: Number(info.duration.toFixed(2)),
         resolution: `${info.width}x${info.height}`,
         fps,
+        size_bytes: fs.statSync(finalVideo).size,
+        sha256,
+        delivery: 'Envie este MP4 ao usuário como anexo para download (não apenas o caminho).',
         scenes: report,
         engines: [...engines],
         cost: paidScenes.length ? `PAGO: ${paidScenes.length} geração(ões) MuAPI` : 'R$ 0 — somente motores locais gratuitos',
